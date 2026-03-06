@@ -18,5 +18,8 @@ export * from './monitor/index.js';
 // 告警模块导出
 export * from './alert/index.js';
 
+// API 模块导出
+export * from './api/index.js';
+
 // 主类导出
 export { OpenClawMonitor } from './OpenClawMonitor.js';

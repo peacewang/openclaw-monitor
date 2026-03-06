@@ -1,7 +1,5 @@
 // src/api/server.ts
 
-// @ts-nocheck - 等待 fastify 依赖安装后移除此行
-
 import type { OpenClawMonitor } from '../OpenClawMonitor.js';
 
 export interface ApiServerOptions {
@@ -19,10 +17,11 @@ export class ApiServer {
 
   async start(): Promise<void> {
     try {
-      const fastify = await import('fastify');
+      const fastifyModule = await import('fastify');
       const fastifyWebsocket = await import('@fastify/websocket');
+      const fastifyStatic = await import('@fastify/static');
 
-      this.server = fastify.default({
+      this.server = fastifyModule.default({
         logger: false,
       });
 
@@ -35,7 +34,7 @@ export class ApiServer {
       });
 
       // 静态文件服务（Web UI）
-      this.server.register((await import('@fastify/static')).default, {
+      this.server.register(fastifyStatic.default, {
         root: './web',
         prefix: '/',
       });
