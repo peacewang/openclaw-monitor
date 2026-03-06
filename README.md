@@ -1,112 +1,133 @@
 # OpenClaw Monitor
 
-OpenClaw Gateway 监控工具 - 实时监控进程状态、日志收集、告警通知。
+<div align="center">
 
-## 功能特性
+![Version](https://img.shields.io/github/v/release/peacewang/openclaw-monitor?style=flat-square)
+![License](https://img.shields.io/github/license/peacewang/openclaw-monitor?style=flat-square)
+![Node](https://img.shields.io/node/v/openclaw-monitor?style=flat-square)
 
-- **实时监控**: CPU、内存、运行状态
-- **日志收集**: 自动收集、搜索、筛选
-- **告警通知**: Telegram、飞书多通道
-- **Web UI**: 可视化监控面板
-- **Bot 交互**: Telegram/飞书命令查询
-- **自动告警**: 进程停止、资源超限自动通知
+**OpenClaw Gateway 监控工具**
+
+实时监控 · 智能告警 · 多端通知
+
+[功能特性](#-功能特性) · [快速开始](#-快速开始) · [配置说明](#-配置说明) · [使用指南](#-使用指南)
+
+</div>
 
 ---
 
-## 安装与运行
+## ✨ 功能特性
 
-### 方式一：从 GitHub 直接安装（推荐）
+OpenClaw Monitor 是一个专为 OpenClaw Gateway 设计的监控工具，帮助你：
+
+- 📊 **实时监控** - CPU、内存、运行状态、端口监听，一目了然
+- 📝 **日志收集** - 自动收集 OpenClaw 日志，支持搜索和筛选
+- 🚨 **智能告警** - 进程异常、资源超限时自动通知
+- 💬 **多端通知** - Telegram、飞书双渠道，随时随地接收告警
+- 🌐 **Web 面板** - 现代化 Web UI，实时状态查看和控制
+- 🤖 **Bot 交互** - 通过 Bot 命令查询状态、查看日志、诊断问题
+- ⚡ **即开即用** - 简单配置，几分钟内完成部署
+
+### 解决的问题
+
+| 问题 | 解决方案 |
+|------|----------|
+| Gateway 悄悄崩溃，没人知道 | 进程停止立即 CRITICAL 告警 |
+| 不知道资源占用情况 | 实时 CPU/内存监控，超限自动告警 |
+| 查日志需要登录服务器 | Web 面板直接查看，支持搜索筛选 |
+| 出问题不知从何排查 | Bot 诊断命令，一键获取错误日志 |
+| 24/7 监控无人值守 | Telegram/飞书告警推送到手机 |
+
+---
+
+## 🚀 快速开始
+
+### 环境要求
+
+- **Node.js** >= 16.0.0
+- **OpenClaw Gateway** 已安装（生产环境）
+
+### 安装
 
 ```bash
-# 全局安装（从 GitHub 仓库）
-npm install -g <your-username>/openclaw-monitor
+# 从 GitHub 安装（推荐）
+npm install -g peacewang/openclaw-monitor
 
-# 安装后启动
+# 或克隆仓库后本地安装
+git clone https://github.com/peacewang/openclaw-monitor.git
+cd openclaw-monitor
+npm install
+npm run build
+npm link
+```
+
+### 配置
+
+```bash
+# 1. 初始化配置文件
+openclaw-monitor config init
+
+# 2. 编辑 config.json，填写你的 Bot 信息
+#    - Telegram Bot 或 飞书 Bot 二选一
+#    - 设置 alerts.enabled = true
+
+# 3. 启动服务
 openclaw-monitor start
 ```
 
-> 将 `<your-username>` 替换为实际的 GitHub 用户名/组织名。
-
-**npm 支持的 GitHub 安装格式**：
-
-```bash
-npm install -g username/repo          # 默认分支
-npm install -g username/repo#main     # 指定分支
-npm install -g github:username/repo   # 完整格式
-```
-
-### 方式二：克隆后运行
-
-```bash
-# 1. 克隆项目
-git clone <repository-url>
-cd openclaw-monitor
-
-# 2. 安装依赖
-npm install
-
-# 3. 构建
-npm run build
-
-# 4. 启动
-npm run start
-```
+访问 http://localhost:37890 查看 Web 面板。
 
 ---
 
-## 快速开始
+## ⚙️ 配置说明
 
-### 1. 初始化配置
-
-```bash
-openclaw-monitor config init
-```
-
-此命令会创建 `config.json` 文件，包含默认配置模板。
-
-**防覆盖保护**：如果 `config.json` 已存在，命令会提示不会覆盖。如需重新生成，使用：
-
-```bash
-openclaw-monitor config init --force
-```
-
-### 2. 编辑配置文件
-
-打开 `config.json`，填写你的配置信息：
+### 最小配置示例
 
 ```json
 {
   "alerts": {
-    "enabled": true,              // 设置为 true 启用告警
-    "telegram": {
-      "enabled": true,            // 启用 Telegram
-      "botToken": "你的_BOT_TOKEN",
-      "chatId": "你的_CHAT_ID"
-    },
+    "enabled": true,
     "feishu": {
-      "enabled": true,            // 启用飞书
-      "app_id": "你的_APP_ID",
-      "app_secret": "你的_APP_SECRET"
+      "enabled": true,
+      "app_id": "cli_xxxxxxxxx",
+      "app_secret": "xxxxxxxxxx"
     }
   }
 }
 ```
 
-至少配置一个告警渠道（telegram 或 feishu）。
+### Telegram Bot 配置
 
-### 3. 启动服务
-
-```bash
-openclaw-monitor start
+```json
+{
+  "alerts": {
+    "enabled": true,
+    "telegram": {
+      "enabled": true,
+      "botToken": "你的_BOT_TOKEN",
+      "chatId": "你的_CHAT_ID"
+    }
+  }
+}
 ```
 
-访问 http://localhost:37890 查看 Web UI。
+### 飞书 Bot 配置
 
----
+```json
+{
+  "alerts": {
+    "enabled": true,
+    "feishu": {
+      "enabled": true,
+      "app_id": "cli_xxxxxxxxx",
+      "app_secret": "xxxxxxxxxx"
+    }
+  }
+}
+```
 
-## 配置说明
-
-### 完整配置示例
+<details>
+<summary>完整配置选项</summary>
 
 ```json
 {
@@ -119,9 +140,6 @@ openclaw-monitor start
       "memory": { "warning": 1024, "critical": 2048 }
     }
   },
-  "openclaw": {
-    "autoDetect": true
-  },
   "web": {
     "enabled": true,
     "port": 37890,
@@ -131,305 +149,231 @@ openclaw-monitor start
     "enabled": true,
     "telegram": {
       "enabled": false,
-      "botToken": "从_BotFather_获取的_Token",
-      "chatId": "你的_Chat_ID",
+      "botToken": "xxx",
+      "chatId": "xxx",
       "proxy": ""
     },
     "feishu": {
       "enabled": false,
-      "app_id": "飞书应用的_App_ID",
-      "app_secret": "飞书应用的_App_Secret"
+      "app_id": "xxx",
+      "app_secret": "xxx"
     }
   }
 }
 ```
 
-### 配置项说明
-
-#### monitoring（监控配置）
-
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| enabled | boolean | true | 是否启用监控 |
-| interval | number | 5 | 检测间隔（秒） |
-| logLines | number | 100 | 保留日志行数 |
-| thresholds | object | - | 告警阈值 |
-
-#### thresholds（告警阈值）
-
-```json
-{
-  "cpu": { "warning": 80, "critical": 95 },
-  "memory": { "warning": 1024, "critical": 2048 }
-}
-```
-
-#### web（Web UI 配置）
-
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| enabled | boolean | true | 是否启用 Web UI |
-| port | number | 37890 | Web 服务端口 |
-| host | string | 0.0.0.0 | 监听地址 |
-
-#### alerts（告警配置）
-
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| enabled | boolean | false | 是否启用告警 |
-| telegram | object | - | Telegram Bot 配置 |
-| feishu | object | - | 飞书 Bot 配置 |
+</details>
 
 ---
 
-## 飞书 Bot 配置（详细步骤）
-
-### 1. 创建应用
-
-1. 访问 [飞书开放平台](https://open.feishu.cn/)
-2. 登录后进入「开发者后台」
-3. 点击「创建企业自建应用」
-4. 填写应用名称（如：OpenClaw Monitor），选择所属企业
-5. 创建后记录 `App ID` 和 `App Secret`（在「凭证与基础信息」页面）
-
-### 2. 申请权限
-
-在应用的「权限管理」页面，申请以下权限：
-
-| 权限名称 | 权限值 | 说明 |
-|----------|--------|------|
-| 获取与发送单条消息 | `im:message` | 接收用户消息 |
-| 发送单条消息 | `im:message:send_as_bot` | 主动发送消息给用户 |
-
-> 点击「申请权限」，选择「全员可访问」或指定成员
-
-### 3. 发布应用
-
-1. 进入「版本管理与发布」
-2. 点击「创建版本」
-3. 填写版本号和更新说明
-4. 点击「申请发布」
-5. **审核通过后**，在「可用范围」中选择「全员可用」或指定成员
-
-### 4. 配置事件订阅（重要！）
-
-1. **先启动 openclaw-monitor 服务**：
-   ```bash
-   openclaw-monitor start
-   ```
-   等待看到日志：`[Feishu Bot] WebSocket 长连接已启动`
-
-2. **进入飞书开放平台**，找到你的应用
-3. 进入「事件与回调」→「添加事件」
-4. 搜索并勾选 `im.message.receive_v1`（接收消息）
-5. **先点击「确定」**（此时会提示未检测到应用连接信息，这是正常的）
-
-6. **在「订阅方式」中选择**：
-   - ❌ 不选择「通过 HTTPS 回调接收事件」
-   - ✅ **选择「使用长连接接收事件/回调」**
-
-7. **确认长连接已建立**：
-   - 在 openclaw-monitor 控制台应该看到：`[info]: [ 'ws client ready' ]`
-   - 这时再点击「保存变更」
-
-> ⚠️ **重要**：必须先启动服务建立长连接，再保存事件订阅配置！否则飞书无法推送事件到你的服务。
-
-### 5. 填写配置
-
-将 `App ID` 和 `App Secret` 填入 `config.json`：
-
-```json
-{
-  "alerts": {
-    "enabled": true,
-    "feishu": {
-      "enabled": true,
-      "app_id": "cli_a123456789",
-      "app_secret": "your_app_secret_here"
-    }
-  }
-}
-```
-
-### 6. 测试
-
-1. 重启 openclaw-monitor
-2. 在飞书中搜索你的应用名称
-3. 发送「帮助」或 `/help`
-4. 应该收到帮助消息
-
----
-
-## Telegram Bot 配置
-
-1. 给 [@BotFather](https://t.me/botfather) 发送 `/newbot` 创建 Bot
-2. 获取 `botToken`
-3. 给你的 Bot 发送一条消息
-4. 访问 `https://api.telegram.org/bot<token>/getUpdates` 获取 `chatId`
-
-```json
-{
-  "alerts": {
-    "enabled": true,
-    "telegram": {
-      "enabled": true,
-      "botToken": "123456:ABC-DEF...",
-      "chatId": "123456789"
-    }
-  }
-}
-```
-
----
-
-## 使用说明
-
-### Web UI
-
-启动后访问 http://localhost:37890
-
-| 页面 | 功能 |
-|------|------|
-| 状态监控 | 实时查看进程状态、CPU、内存、控制 Gateway |
-| 日志查看 | 搜索和筛选日志 |
-| 配置管理 | 在线修改配置 |
-| 告警历史 | 查看历史告警，发送测试告警 |
-
-### Bot 命令
-
-#### Telegram Bot
-
-| 命令 | 说明 |
-|------|------|
-| `/status` | 查看运行状态 |
-| `/logs [数量]` | 查看最近日志 (默认5条，最多20条) |
-| `/doctor` | 诊断系统问题 |
-| `/doctor fix` | 尝试自动修复问题 |
-| `/restart` | 重启 OpenClaw |
-| `/help` | 显示帮助 |
-
-#### 飞书 Bot
-
-飞书支持中英文命令：
-
-| 命令 | 别名 |
-|------|------|
-| `/status` | `状态` |
-| `/logs [数量]` | `日志` |
-| `/doctor` | `诊断` |
-| `/restart` | `重启` |
-| `/help` | `帮助` |
+## 📖 使用指南
 
 ### CLI 命令
 
 ```bash
-# 初始化配置
-openclaw-monitor config init
+openclaw-monitor config init      # 初始化配置
+openclaw-monitor start            # 启动监控
+openclaw-monitor status           # 查看状态
+openclaw-monitor logs -n 100      # 查看日志
+openclaw-monitor diagnose -n 20   # 诊断问题
+```
 
-# 启动监控
-openclaw-monitor start
+### Bot 命令
 
-# 查看状态
-openclaw-monitor status
+#### Telegram / 飞书
 
-# 查看日志
-openclaw-monitor logs -n 100
+| 命令 | 说明 |
+|------|------|
+| `/status` 或 `状态` | 查看运行状态 |
+| `/logs [数量]` 或 `日志` | 查看最近日志 |
+| `/doctor` 或 `诊断` | 诊断系统问题 |
+| `/restart` 或 `重启` | 重启 Gateway |
+| `/help` 或 `帮助` | 显示帮助 |
 
-# 诊断问题
-openclaw-monitor diagnose -n 20
+### Web 面板
 
-# 显示帮助
-openclaw-monitor help
+- **状态监控** - 实时状态、资源趋势、控制按钮
+- **日志查看** - 搜索筛选、实时更新
+- **配置管理** - 在线修改配置
+- **告警历史** - 历史记录、测试告警
+
+---
+
+## 🛠️ 技术栈
+
+| 类别 | 技术 |
+|------|------|
+| **运行时** | Node.js >= 16.0.0 |
+| **语言** | TypeScript 5.x |
+| **Web 框架** | Fastify |
+| **WebSocket** | WS (飞书长连接) |
+| **进程监控** | pidusage |
+| **Bot SDK** | @larksuiteoapi/node-sdk (飞书) |
+| **前端** | 原生 JavaScript + Chart.js |
+
+---
+
+## 📦 依赖项
+
+### 运行时依赖
+
+```json
+{
+  "fastify": "^4.0.0",
+  "pidusage": "^3.0.0",
+  "@larksuiteoapi/node-sdk": "^1.30.0",
+  "chart.js": "^4.4.0"
+}
+```
+
+### 开发依赖
+
+```json
+{
+  "typescript": "^5.0.0",
+  "tsx": "^4.0.0",
+  "vitest": "^1.0.0",
+  "eslint": "^8.0.0"
+}
 ```
 
 ---
 
-## 监控与告警
+## 🔧 飞书 Bot 配置详解
 
-### 监控内容
+<details>
+<summary>点击展开详细配置步骤</summary>
 
-| 检测项 | 说明 |
-|--------|------|
-| 进程状态 | 检测 OpenClaw Gateway 是否运行 |
-| CPU 使用率 | 实时获取进程 CPU 占用 |
-| 内存使用 | 实时获取进程内存占用 |
-| 端口状态 | 检测服务端口是否监听 |
-| 日志收集 | 自动收集 OpenClaw 日志 |
+### 1. 创建飞书应用
 
-### 告警规则
+1. 访问 [飞书开放平台](https://open.feishu.cn/)
+2. 创建企业自建应用，获取 `App ID` 和 `App Secret`
 
-| 告警类型 | 触发条件 | 级别 |
-|----------|----------|------|
-| 进程停止 | OpenClaw 进程退出 | CRITICAL |
-| 进程启动 | OpenClaw 进程启动 | INFO |
-| CPU 过高 | CPU >= 95% | WARNING |
-| 内存过高 | 内存 >= 2048 MB | WARNING |
+### 2. 申请权限
 
-> 注意：资源告警仅在进程运行时检测。
+在「权限管理」中申请：
+- `im:message` - 接收消息
+- `im:message:send_as_bot` - 发送消息
+
+### 3. 发布应用
+
+在「版本管理与发布」中创建版本并发布
+
+### 4. 配置事件订阅
+
+**重要顺序**：
+1. 先启动 `openclaw-monitor start`
+2. 等待日志显示 `WebSocket 长连接已启动`
+3. 在飞书平台选择「使用长连接接收事件/回调」
+4. 添加 `im.message.receive_v1` 事件
+5. 保存配置
+
+### 5. 测试
+
+在飞书中搜索应用，发送「帮助」测试
+
+</details>
 
 ---
 
-## 开发
+## 📸 界面预览
 
-```bash
-# 安装依赖
-npm install
+### Web 面板
 
-# 构建
-npm run build
-
-# 运行测试
-npm test
+```
+┌─────────────────────────────────────────────────────┐
+│  OpenClaw Monitor                                    │
+├─────────────────────────────────────────────────────┤
+│  状态监控 │ 日志查看 │ 配置管理 │ 告警历史            │
+├─────────────────────────────────────────────────────┤
+│                                                       │
+│  ✅ OpenClaw Gateway 运行中                           │
+│  PID: 12345 │ CPU: 12.3% │ 内存: 256 MB              │
+│                                                       │
+│  ┌─────────┬─────────┬─────────┬─────────┐           │
+│  │ CPU 使用 │ 内存使用 │ 进程 ID │ 服务端口 │           │
+│  │  ██████  │  ████   │  12345  │  8080 ✓ │           │
+│  └─────────┴─────────┴─────────┴─────────┘           │
+│                                                       │
+│  📈 资源趋势图                                        │
+│  ┌─────────────────────────────────────────┐          │
+│  │    CPU ────                            │          │
+│  │    内存 ────                           │          │
+│  └─────────────────────────────────────────┘          │
+│                                                       │
+│  🎮 Gateway 控制                                    │
+│  [重启] [停止] [启动] [诊断]                         │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 故障排查
+## 🤝 贡献
 
-### 启动失败：OpenClaw not installed
+欢迎贡献代码！请遵循以下步骤：
 
-**原因**: 未安装 OpenClaw Gateway
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'feat: add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启 Pull Request
 
-**解决方案**:
-- 确认已安装 OpenClaw Gateway
-- 检查 OpenClaw 是否在系统 PATH 中
+---
 
-### 飞书 Bot 无响应
+## 📋 待办事项
 
-1. **检查应用是否发布**：必须在「版本管理与发布」中发布应用
-2. **检查权限**：确认已申请 `im:message` 和 `im:message:send_as_bot`
-3. **检查事件订阅**：
-   - 必须选择「使用长连接接收事件/回调」
-   - 必须先启动服务再保存配置
-4. **激活用户**：先给 Bot 发送一条消息，才能接收告警
+- [ ] Docker 镜像支持
+- [ ] 多实例管理
+- [ ] 告警规则自定义
+- [ ] 更多告警渠道（钉钉、企业微信）
+- [ ] 数据持久化与历史图表
 
-### Telegram Bot 无响应
+---
 
-1. 检查 `botToken` 和 `chatId` 是否正确
-2. 检查网络是否正常（可能需要代理）
-3. 如需代理，在配置中添加：
-   ```json
-   { "proxy": "http://proxy:port" }
-   ```
+## ❓ 常见问题
 
-### 告警未收到
+<details>
+<summary>启动失败：OpenClaw not installed</summary>
+
+请确认已安装 OpenClaw Gateway，并在系统 PATH 中可用。
+</details>
+
+<details>
+<summary>飞书 Bot 无响应</summary>
+
+1. 确认应用已发布
+2. 确认已配置长连接事件订阅
+3. 先给 Bot 发送一条消息激活
+</details>
+
+<details>
+<summary>告警未收到</summary>
 
 1. 检查 `alerts.enabled` 是否为 `true`
-2. **对于飞书**：需要先给 Bot 发送一条消息以记录用户 ID
-3. 检查告警历史：Web UI → 告警历史
-
-### 飞书事件订阅提示「未检测到应用连接信息」
-
-**这是正常的**。按照以下顺序操作：
-
-1. 先启动 openclaw-monitor（建立长连接）
-2. 在飞书开放平台选择「使用长连接接收事件/回调」
-3. 点击「保存变更」
-
-长连接建立后，飞书会自动推送事件到你的应用。
+2. 飞书需先发送消息激活用户
+3. 检查告警历史确认发送状态
+</details>
 
 ---
 
-## License
+## 📄 许可证
 
-MIT
+MIT License - 详见 [LICENSE](LICENSE)
+
+---
+
+## 🔗 相关链接
+
+- [OpenClaw Gateway](https://github.com/peacewang/openclaw)
+- [问题反馈](https://github.com/peacewang/openclaw-monitor/issues)
+- [更新日志](CHANGELOG.md)
+
+---
+
+<div align="center">
+
+**Made with ❤️ by [peacewang](https://github.com/peacewang)**
+
+[⭐ Star](https://github.com/peacewang/openclaw-monitor) · [🍴 Fork](https://github.com/peacewang/openclaw-monitor/fork) · [📢 Watch](https://github.com/peacewang/openclaw-monitor)
+
+</div>
