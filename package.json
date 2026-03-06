@@ -3,9 +3,7 @@
   "version": "0.1.0",
   "description": "OpenClaw Gateway Monitor",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "exports": "./dist/index.js",
+  "main": "dist/cli/index.js",
   "bin": {
     "openclaw-monitor": "./dist/cli/index.js"
   },
@@ -29,7 +27,6 @@
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/pidusage": "^2.0.5",
-    "chart.js": "^4.5.1",
     "commander": "^12.1.0",
     "eslint": "^8.56.0",
     "memfs": "^4.56.11",
@@ -39,5 +36,10 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "files": [
+    "dist",
+    "web",
+    "config.example.json"
+  ]
 }
