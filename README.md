@@ -23,14 +23,9 @@ npm install -g <your-username>/openclaw-monitor
 
 # 安装后启动
 openclaw-monitor start
-
-# 开发模式启动
-openclaw-monitor start --dev
 ```
 
 > 将 `<your-username>` 替换为实际的 GitHub 用户名/组织名。
->
-> 示例：`npm install -g peace/openclaw-monitor`
 
 **npm 支持的 GitHub 安装格式**：
 
@@ -54,8 +49,7 @@ npm install
 npm run build
 
 # 4. 启动
-npm run start:dev    # 开发模式（无需 OpenClaw）
-npm run start        # 生产模式（需要 OpenClaw Gateway）
+npm run start
 ```
 
 ---
@@ -103,7 +97,7 @@ openclaw-monitor config init --force
 ### 3. 启动服务
 
 ```bash
-openclaw-monitor start --dev
+openclaw-monitor start
 ```
 
 访问 http://localhost:37890 查看 Web UI。
@@ -221,7 +215,7 @@ openclaw-monitor start --dev
 
 1. **先启动 openclaw-monitor 服务**：
    ```bash
-   openclaw-monitor start --dev
+   openclaw-monitor start
    ```
    等待看到日志：`[Feishu Bot] WebSocket 长连接已启动`
 
@@ -333,8 +327,7 @@ openclaw-monitor start --dev
 openclaw-monitor config init
 
 # 启动监控
-openclaw-monitor start --dev     # 开发模式
-openclaw-monitor start            # 生产模式
+openclaw-monitor start
 
 # 查看状态
 openclaw-monitor status
@@ -385,9 +378,6 @@ npm install
 # 构建
 npm run build
 
-# 开发模式（无需 OpenClaw）
-npm run start:dev
-
 # 运行测试
 npm test
 ```
@@ -401,8 +391,8 @@ npm test
 **原因**: 未安装 OpenClaw Gateway
 
 **解决方案**:
-- 安装 OpenClaw Gateway，或
-- 使用开发模式：`openclaw-monitor start --dev`
+- 确认已安装 OpenClaw Gateway
+- 检查 OpenClaw 是否在系统 PATH 中
 
 ### 飞书 Bot 无响应
 
