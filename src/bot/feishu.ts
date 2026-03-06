@@ -45,6 +45,7 @@ export class FeishuBotService implements BotService {
   enabled: boolean;
   private wsClient?: Lark.WSClient;
   private client?: Lark.Client;
+  private processedMessages = new Set<string>(); // 消息去重
 
   constructor(
     private config: FeishuConfig,
@@ -118,6 +119,19 @@ export class FeishuBotService implements BotService {
 
       const sender = eventData?.sender || eventData;
       const senderId = sender?.sender_id?.open_id || sender?.sender_id?.user_id || sender?.open_id;
+      const messageId = eventData?.message?.message_id || eventData?.message_id;
+
+      // 消息去重：使用消息 ID 防止重复处理
+      if (messageId) {
+        const key = `${senderId}:${messageId}`;
+        if (this.processedMessages.has(key)) {
+          console.log('[Feishu Bot] 消息已处理，跳过');
+          return;
+        }
+        this.processedMessages.add(key);
+        // 10分钟后清理记录
+        setTimeout(() => this.processedMessages.delete(key), 10 * 60 * 1000);
+      }
 
       if (senderId) {
         addUserOpenId(senderId);
@@ -176,6 +190,10 @@ export class FeishuBotService implements BotService {
       case '/diagnose':
       case '诊断':
         await this.handleDoctor(senderId, args);
+        break;
+
+      case '修复':
+        await this.handleDoctor(senderId, 'fix');
         break;
 
       case '/restart':
@@ -237,74 +255,45 @@ export class FeishuBotService implements BotService {
   }
 
   private async handleDoctor(senderId: string, args: string): Promise<void> {
-    if (!this.monitor.isStarted()) {
-      await this.sendMessage(senderId, '监控服务未启动');
-      return;
-    }
+    const isFix = args === 'fix';
+    console.log(`[Feishu Bot] handleDoctor 被调用，args="${args}", isFix=${isFix}`);
+    const command = isFix ? 'openclaw doctor --fix' : 'openclaw doctor';
+    console.log(`[Feishu Bot] 将执行命令: ${command}`);
 
-    const status = await this.monitor.getStatus();
-    const logs = this.monitor.getRecentLines(50);
-    const errors = logs.filter(l => l.level === 'ERROR' || l.level === 'FATAL');
+    await this.sendMessage(senderId, `⏳ **正在${isFix ? '修复' : '诊断'} OpenClaw**...\n\n请稍候`);
 
-    let diagnosis: string[] = [];
+    try {
+      const { stdout, stderr } = await exec(command, { timeout: 60000 });
+      console.log(`[Feishu Bot] 命令执行完成，stdout 长度: ${stdout.length}, stderr 长度: ${stderr.length}`);
 
-    // 1. 进程状态检查
-    if (!status.running) {
-      diagnosis.push('🔴 **进程状态**: OpenClaw Gateway 未运行');
-    } else {
-      diagnosis.push(`✅ **进程状态**: 运行中 (PID: ${status.pid})`);
-    }
+      // 合并 stdout 和 stderr
+      const output = [stdout, stderr].filter(Boolean).join('\n');
 
-    // 2. 资源使用检查
-    if (status.running) {
-      if (status.cpuPercent > 80) {
-        diagnosis.push(`⚠️ **CPU 使用**: ${status.cpuPercent.toFixed(1)}% (偏高)`);
-      } else {
-        diagnosis.push(`✅ **CPU 使用**: ${status.cpuPercent.toFixed(1)}%`);
+      if (!output.trim()) {
+        await this.sendMessage(senderId, '**诊断结果**\n\n命令执行完成，但没有返回输出。');
+        return;
       }
 
-      if (status.memoryMB > 1024) {
-        diagnosis.push(`⚠️ **内存使用**: ${status.memoryMB.toFixed(0)} MB (偏高)`);
-      } else {
-        diagnosis.push(`✅ **内存使用**: ${status.memoryMB.toFixed(0)} MB`);
-      }
-    }
+      // 清理输出，移除 ANSI 颜色代码
+      let cleanOutput = output
+        .replace(/\x1b\[[0-9;]*m/g, '') // 移除 ANSI 颜色代码
+        .replace(/\[0m/g, '')           // 移除重置代码
+        .replace(/\[2K/g, '')           // 移除清除行代码
+        .replace(/\r\n?/g, '\n')         // 统一换行符
+        .trim();
 
-    // 3. 端口检查
-    if (status.port && !status.portOpen) {
-      diagnosis.push(`🔴 **端口状态**: ${status.port} 端口未监听`);
-    } else if (status.port) {
-      diagnosis.push(`✅ **端口状态**: ${status.port} 正常监听`);
-    }
+      // 移除多余的空行
+      cleanOutput = cleanOutput.replace(/\n{3,}/g, '\n\n');
 
-    // 4. 错误日志统计
-    if (errors.length > 0) {
-      diagnosis.push(`⚠️ **错误日志**: 最近发现 ${errors.length} 条错误`);
-      // 显示最近 3 条错误
-      const recentErrors = errors.slice(-3).map(e =>
-        `[${new Date(e.timestamp).toLocaleTimeString('zh-CN')}] ${e.message.substring(0, 80)}`
-      ).join('\n');
-      diagnosis.push(`最近错误:\n${recentErrors}`);
-    } else {
-      diagnosis.push(`✅ **错误日志**: 未发现错误`);
+      await this.sendMessage(senderId, `**诊断报告**\n\n\`\`\`${cleanOutput}\`\`\``);
+    } catch (error: any) {
+      await this.sendMessage(senderId,
+        '❌ **诊断失败**\n\n' +
+        `执行命令时出错：${error.message}\n\n` +
+        '请尝试手动执行：' +
+        `\`${args === 'fix' ? 'openclaw doctor --fix' : 'openclaw doctor'}\``
+      );
     }
-
-    // 处理 fix 参数
-    if (args === 'fix') {
-      diagnosis.push('\n🔧 **自动修复**');
-      diagnosis.push('抱歉，自动修复功能尚未实现。');
-      diagnosis.push('建议操作：');
-      if (!status.running) {
-        diagnosis.push('- 手动启动 OpenClaw Gateway');
-      }
-      if (errors.length > 0) {
-        diagnosis.push('- 检查 OpenClaw 配置文件');
-        diagnosis.push('- 查看完整日志排查问题');
-      }
-    }
-
-    const result = diagnosis.join('\n');
-    await this.sendMessage(senderId, `**诊断报告**\n\n${result}`);
   }
 
   private async handleRestart(senderId: string): Promise<void> {
@@ -376,17 +365,72 @@ export class FeishuBotService implements BotService {
     }
 
     try {
-      await this.client.im.v1.message.create({
-        params: { receive_id_type: 'open_id' },
-        data: {
-          receive_id: senderId,
-          msg_type: 'text',
-          content: JSON.stringify({ text }),
-        },
-      });
+      // 飞书文本消息长度限制约 2000 字符，超过则分片发送
+      const MAX_LENGTH = 1800; // 留一些余量
+      const messages = this.splitMessage(text, MAX_LENGTH);
+
+      for (const msg of messages) {
+        await this.client.im.v1.message.create({
+          params: { receive_id_type: 'open_id' },
+          data: {
+            receive_id: senderId,
+            msg_type: 'text',
+            content: JSON.stringify({ text: msg }),
+          },
+        });
+        // 分片之间稍微延迟，避免触发频率限制
+        if (messages.length > 1) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
     } catch (error) {
       console.error('[Feishu Bot] 发送消息失败:', (error as Error).message);
     }
+  }
+
+  private splitMessage(text: string, maxLength: number): string[] {
+    if (text.length <= maxLength) {
+      return [text];
+    }
+
+    const messages: string[] = [];
+    const lines = text.split('\n');
+    let currentMessage = '';
+
+    for (const line of lines) {
+      // 如果单行就超过限制，需要强制分割
+      if (line.length > maxLength) {
+        // 先保存当前消息
+        if (currentMessage) {
+          messages.push(currentMessage);
+          currentMessage = '';
+        }
+        // 按长度分割长行
+        let remaining = line;
+        while (remaining.length > 0) {
+          messages.push(remaining.substring(0, maxLength));
+          remaining = remaining.substring(maxLength);
+        }
+      } else {
+        // 检查添加这行是否会超出限制
+        if (currentMessage && currentMessage.length + line.length + 1 > maxLength) {
+          messages.push(currentMessage);
+          currentMessage = line;
+        } else {
+          if (currentMessage) {
+            currentMessage += '\n' + line;
+          } else {
+            currentMessage = line;
+          }
+        }
+      }
+    }
+
+    if (currentMessage) {
+      messages.push(currentMessage);
+    }
+
+    return messages;
   }
 
   private formatUptime(seconds?: number): string {
@@ -404,7 +448,7 @@ export class FeishuBotService implements BotService {
 /status 或 状态 - 查看 OpenClaw 运行状态
 /logs 或 日志 [数量] - 查看最近日志 (默认5条，最多20条)
 /doctor 或 诊断 - 诊断系统问题
-/doctor fix - 尝试自动修复问题
+/doctor fix 或 修复 - 尝试自动修复问题
 /restart 或 重启 - 重启 OpenClaw
 /help 或 帮助 - 显示此帮助
 

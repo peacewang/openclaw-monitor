@@ -24,11 +24,12 @@ export class StatusComponent {
             <div class="status-banner-subtitle" id="statusSubtitle">正在获取 OpenClaw Gateway 状态</div>
           </div>
           <div class="status-banner-actions">
-            <button class="icon-btn" id="btnQuickRefresh" title="刷新状态">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="restart-btn" id="btnQuickRestart" title="重启 Gateway">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M23 4v6h-6M1 20v-6h6"/>
                 <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
               </svg>
+              <span>重启 OpenClaw</span>
             </button>
           </div>
         </div>
@@ -54,40 +55,19 @@ export class StatusComponent {
           </div>
 
           <div class="metric-card metric-info">
-            <div class="metric-icon">🔢</div>
+            <div class="metric-icon">⏱️</div>
             <div class="metric-content">
-              <div class="metric-label">进程 ID</div>
-              <div class="metric-value large" id="metricPid">--</div>
+              <div class="metric-label">运行时长</div>
+              <div class="metric-value" id="metricUptime">--</div>
             </div>
           </div>
 
           <div class="metric-card metric-warning">
-            <div class="metric-icon">🌐</div>
+            <div class="metric-icon">🕐</div>
             <div class="metric-content">
-              <div class="metric-label">服务端口</div>
-              <div class="metric-value large" id="metricPort">--</div>
-              <div class="metric-status" id="metricPortStatus">--</div>
+              <div class="metric-label">最后检查</div>
+              <div class="metric-value small" id="metricLastCheck">--</div>
             </div>
-          </div>
-        </div>
-
-        <!-- 详细信息行 -->
-        <div class="info-row">
-          <div class="info-card">
-            <div class="info-label">运行时长</div>
-            <div class="info-value" id="infoUptime">--</div>
-          </div>
-          <div class="info-card">
-            <div class="info-label">最后检查</div>
-            <div class="info-value" id="infoLastCheck">--</div>
-          </div>
-          <div class="info-card">
-            <div class="info-label">重启次数</div>
-            <div class="info-value" id="infoRestarts">--</div>
-          </div>
-          <div class="info-card">
-            <div class="info-label">检查间隔</div>
-            <div class="info-value">5 秒</div>
           </div>
         </div>
 
@@ -102,43 +82,6 @@ export class StatusComponent {
           </div>
           <div class="chart-container">
             <canvas id="trendChart"></canvas>
-          </div>
-        </div>
-
-        <!-- 控制面板 -->
-        <div class="control-panel">
-          <div class="control-panel-header">
-            <h3>Gateway 控制</h3>
-            <span class="control-hint">操作仅在非开发模式下可用</span>
-          </div>
-          <div class="control-buttons">
-            <button class="control-btn control-btn-primary" id="btnRestart">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M23 4v6h-6M1 20v-6h6"/>
-                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-              </svg>
-              重启 Gateway
-            </button>
-            <button class="control-btn control-btn-danger" id="btnStop">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-              </svg>
-              停止 Gateway
-            </button>
-            <button class="control-btn control-btn-success" id="btnStart">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="5 3 19 12 5 21 5 3"/>
-              </svg>
-              启动 Gateway
-            </button>
-            <button class="control-btn control-btn-info" id="btnDiagnose">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-              运行诊断
-            </button>
           </div>
         </div>
 
@@ -223,6 +166,31 @@ export class StatusComponent {
             transform: scale(1.05);
           }
 
+          .restart-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #fff;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+
+          .restart-btn:hover {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+          }
+
+          .restart-btn svg {
+            flex-shrink: 0;
+          }
+
           /* 指标网格 */
           .metrics-grid {
             display: grid;
@@ -277,6 +245,11 @@ export class StatusComponent {
             font-size: 28px;
           }
 
+          .metric-value.small {
+            font-size: 14px;
+            font-weight: 500;
+          }
+
           .metric-bar-bg {
             height: 4px;
             background: #334155;
@@ -295,33 +268,6 @@ export class StatusComponent {
             font-size: 12px;
             color: #94a3b8;
             margin-top: 4px;
-          }
-
-          /* 信息行 */
-          .info-row {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-          }
-
-          .info-card {
-            padding: 16px 20px;
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 10px;
-            text-align: center;
-          }
-
-          .info-label {
-            font-size: 12px;
-            color: #94a3b8;
-            margin-bottom: 4px;
-          }
-
-          .info-value {
-            font-size: 14px;
-            color: #f1f5f9;
-            font-weight: 500;
           }
 
           /* 图表区域 */
@@ -376,76 +322,6 @@ export class StatusComponent {
             height: 200px;
           }
 
-          /* 控制面板 */
-          .control-panel {
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 12px;
-            padding: 20px;
-          }
-
-          .control-panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-          }
-
-          .control-panel-header h3 {
-            font-size: 16px;
-            color: #f1f5f9;
-            margin: 0;
-          }
-
-          .control-hint {
-            font-size: 12px;
-            color: #64748b;
-          }
-
-          .control-buttons {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-          }
-
-          .control-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-          }
-
-          .control-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-          }
-
-          .control-btn-primary {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: #fff;
-          }
-
-          .control-btn-danger {
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-            color: #fff;
-          }
-
-          .control-btn-success {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            color: #fff;
-          }
-
-          .control-btn-info {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: #fff;
-          }
-
           /* 响应式 */
           @media (max-width: 768px) {
             .metrics-grid,
@@ -468,11 +344,7 @@ export class StatusComponent {
   }
 
   bindEvents() {
-    document.getElementById('btnQuickRefresh')?.addEventListener('click', () => this.refresh());
-    document.getElementById('btnRestart')?.addEventListener('click', () => this.handleRestart());
-    document.getElementById('btnStop')?.addEventListener('click', () => this.handleStop());
-    document.getElementById('btnStart')?.addEventListener('click', () => this.handleStart());
-    document.getElementById('btnDiagnose')?.addEventListener('click', () => this.handleDiagnose());
+    document.getElementById('btnQuickRestart')?.addEventListener('click', () => this.handleRestart());
   }
 
   async refresh() {
@@ -504,7 +376,7 @@ export class StatusComponent {
       banner.className = 'status-banner stopped';
       icon.textContent = '❌';
       title.textContent = 'OpenClaw Gateway 已停止';
-      subtitle.textContent = '点击下方按钮启动服务';
+      subtitle.textContent = '点击重启按钮启动服务';
     }
 
     // 更新指标
@@ -514,14 +386,8 @@ export class StatusComponent {
     document.getElementById('metricMemory').textContent = (data.memoryMB?.toFixed(0) || '0') + ' MB';
     document.getElementById('metricMemoryBar').style.width = Math.min((data.memoryMB || 0) / 20, 100) + '%';
 
-    document.getElementById('metricPid').textContent = data.pid || '--';
-    document.getElementById('metricPort').textContent = data.port || '--';
-    document.getElementById('metricPortStatus').textContent = data.portOpen ? '✓ 监听中' : '✗ 未监听';
-
-    // 更新信息行
-    document.getElementById('infoUptime').textContent = this.formatUptime(data.uptime);
-    document.getElementById('infoLastCheck').textContent = new Date(data.lastCheck).toLocaleTimeString('zh-CN');
-    document.getElementById('infoRestarts').textContent = data.restartCount || 0;
+    document.getElementById('metricUptime').textContent = this.formatUptime(data.uptime);
+    document.getElementById('metricLastCheck').textContent = new Date(data.lastCheck).toLocaleTimeString('zh-CN');
   }
 
   showError() {
@@ -613,42 +479,17 @@ export class StatusComponent {
 
   async handleRestart() {
     if (!confirm('确认要重启 OpenClaw Gateway 吗？')) return;
-    await this.doAction('/api/gateway/restart', '重启');
-  }
-
-  async handleStop() {
-    if (!confirm('确认要停止 OpenClaw Gateway 吗？')) return;
-    await this.doAction('/api/gateway/stop', '停止');
-  }
-
-  async handleStart() {
-    await this.doAction('/api/gateway/start', '启动');
-  }
-
-  async handleDiagnose() {
+    showToast('正在重启 Gateway...', 'info');
     try {
-      const res = await fetch(`${this.apiBase}/logs/errors?limit=10`);
-      const errors = await res.json();
-      if (errors.length === 0) {
-        alert('✅ 未发现错误');
-      } else {
-        alert(`发现 ${errors.length} 条错误，请查看日志页面`);
-      }
-    } catch (error) {
-      alert('诊断失败: ' + error.message);
-    }
-  }
-
-  async doAction(url, name) {
-    showToast(`正在${name} Gateway...`, 'info');
-    try {
-      const res = await fetch(url, { method: 'POST' });
+      const res = await fetch('/api/gateway/restart', { method: 'POST' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const result = await res.json();
-      showToast(result.message || `${name}命令已发送`, 'success');
+      showToast(result.message || '重启命令已发送', result.success ? 'success' : 'error');
+      // 等待后刷新状态
+      await new Promise(resolve => setTimeout(resolve, 5000));
       await this.refresh();
     } catch (error) {
-      showToast(`${name}失败: ` + error.message, 'error');
+      showToast('重启失败: ' + error.message, 'error');
     }
   }
 

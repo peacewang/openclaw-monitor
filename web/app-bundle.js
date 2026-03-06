@@ -24,11 +24,12 @@
             <div class="status-banner-subtitle" id="statusSubtitle">\u6B63\u5728\u83B7\u53D6 OpenClaw Gateway \u72B6\u6001</div>
           </div>
           <div class="status-banner-actions">
-            <button class="icon-btn" id="btnQuickRefresh" title="\u5237\u65B0\u72B6\u6001">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="restart-btn" id="btnQuickRestart" title="\u91CD\u542F Gateway">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M23 4v6h-6M1 20v-6h6"/>
                 <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
               </svg>
+              <span>\u91CD\u542F OpenClaw</span>
             </button>
           </div>
         </div>
@@ -54,40 +55,19 @@
           </div>
 
           <div class="metric-card metric-info">
-            <div class="metric-icon">\u{1F522}</div>
+            <div class="metric-icon">\u23F1\uFE0F</div>
             <div class="metric-content">
-              <div class="metric-label">\u8FDB\u7A0B ID</div>
-              <div class="metric-value large" id="metricPid">--</div>
+              <div class="metric-label">\u8FD0\u884C\u65F6\u957F</div>
+              <div class="metric-value" id="metricUptime">--</div>
             </div>
           </div>
 
           <div class="metric-card metric-warning">
-            <div class="metric-icon">\u{1F310}</div>
+            <div class="metric-icon">\u{1F550}</div>
             <div class="metric-content">
-              <div class="metric-label">\u670D\u52A1\u7AEF\u53E3</div>
-              <div class="metric-value large" id="metricPort">--</div>
-              <div class="metric-status" id="metricPortStatus">--</div>
+              <div class="metric-label">\u6700\u540E\u68C0\u67E5</div>
+              <div class="metric-value small" id="metricLastCheck">--</div>
             </div>
-          </div>
-        </div>
-
-        <!-- \u8BE6\u7EC6\u4FE1\u606F\u884C -->
-        <div class="info-row">
-          <div class="info-card">
-            <div class="info-label">\u8FD0\u884C\u65F6\u957F</div>
-            <div class="info-value" id="infoUptime">--</div>
-          </div>
-          <div class="info-card">
-            <div class="info-label">\u6700\u540E\u68C0\u67E5</div>
-            <div class="info-value" id="infoLastCheck">--</div>
-          </div>
-          <div class="info-card">
-            <div class="info-label">\u91CD\u542F\u6B21\u6570</div>
-            <div class="info-value" id="infoRestarts">--</div>
-          </div>
-          <div class="info-card">
-            <div class="info-label">\u68C0\u67E5\u95F4\u9694</div>
-            <div class="info-value">5 \u79D2</div>
           </div>
         </div>
 
@@ -102,43 +82,6 @@
           </div>
           <div class="chart-container">
             <canvas id="trendChart"></canvas>
-          </div>
-        </div>
-
-        <!-- \u63A7\u5236\u9762\u677F -->
-        <div class="control-panel">
-          <div class="control-panel-header">
-            <h3>Gateway \u63A7\u5236</h3>
-            <span class="control-hint">\u64CD\u4F5C\u4EC5\u5728\u975E\u5F00\u53D1\u6A21\u5F0F\u4E0B\u53EF\u7528</span>
-          </div>
-          <div class="control-buttons">
-            <button class="control-btn control-btn-primary" id="btnRestart">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M23 4v6h-6M1 20v-6h6"/>
-                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-              </svg>
-              \u91CD\u542F Gateway
-            </button>
-            <button class="control-btn control-btn-danger" id="btnStop">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-              </svg>
-              \u505C\u6B62 Gateway
-            </button>
-            <button class="control-btn control-btn-success" id="btnStart">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="5 3 19 12 5 21 5 3"/>
-              </svg>
-              \u542F\u52A8 Gateway
-            </button>
-            <button class="control-btn control-btn-info" id="btnDiagnose">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-              \u8FD0\u884C\u8BCA\u65AD
-            </button>
           </div>
         </div>
 
@@ -223,6 +166,31 @@
             transform: scale(1.05);
           }
 
+          .restart-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #fff;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+
+          .restart-btn:hover {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+          }
+
+          .restart-btn svg {
+            flex-shrink: 0;
+          }
+
           /* \u6307\u6807\u7F51\u683C */
           .metrics-grid {
             display: grid;
@@ -277,6 +245,11 @@
             font-size: 28px;
           }
 
+          .metric-value.small {
+            font-size: 14px;
+            font-weight: 500;
+          }
+
           .metric-bar-bg {
             height: 4px;
             background: #334155;
@@ -295,33 +268,6 @@
             font-size: 12px;
             color: #94a3b8;
             margin-top: 4px;
-          }
-
-          /* \u4FE1\u606F\u884C */
-          .info-row {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-          }
-
-          .info-card {
-            padding: 16px 20px;
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 10px;
-            text-align: center;
-          }
-
-          .info-label {
-            font-size: 12px;
-            color: #94a3b8;
-            margin-bottom: 4px;
-          }
-
-          .info-value {
-            font-size: 14px;
-            color: #f1f5f9;
-            font-weight: 500;
           }
 
           /* \u56FE\u8868\u533A\u57DF */
@@ -376,76 +322,6 @@
             height: 200px;
           }
 
-          /* \u63A7\u5236\u9762\u677F */
-          .control-panel {
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 12px;
-            padding: 20px;
-          }
-
-          .control-panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-          }
-
-          .control-panel-header h3 {
-            font-size: 16px;
-            color: #f1f5f9;
-            margin: 0;
-          }
-
-          .control-hint {
-            font-size: 12px;
-            color: #64748b;
-          }
-
-          .control-buttons {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-          }
-
-          .control-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-          }
-
-          .control-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-          }
-
-          .control-btn-primary {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: #fff;
-          }
-
-          .control-btn-danger {
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-            color: #fff;
-          }
-
-          .control-btn-success {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            color: #fff;
-          }
-
-          .control-btn-info {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: #fff;
-          }
-
           /* \u54CD\u5E94\u5F0F */
           @media (max-width: 768px) {
             .metrics-grid,
@@ -464,11 +340,7 @@
       this.refreshInterval = setInterval(() => this.refresh(), 5e3);
     }
     bindEvents() {
-      document.getElementById("btnQuickRefresh")?.addEventListener("click", () => this.refresh());
-      document.getElementById("btnRestart")?.addEventListener("click", () => this.handleRestart());
-      document.getElementById("btnStop")?.addEventListener("click", () => this.handleStop());
-      document.getElementById("btnStart")?.addEventListener("click", () => this.handleStart());
-      document.getElementById("btnDiagnose")?.addEventListener("click", () => this.handleDiagnose());
+      document.getElementById("btnQuickRestart")?.addEventListener("click", () => this.handleRestart());
     }
     async refresh() {
       try {
@@ -497,18 +369,14 @@
         banner.className = "status-banner stopped";
         icon.textContent = "\u274C";
         title.textContent = "OpenClaw Gateway \u5DF2\u505C\u6B62";
-        subtitle.textContent = "\u70B9\u51FB\u4E0B\u65B9\u6309\u94AE\u542F\u52A8\u670D\u52A1";
+        subtitle.textContent = "\u70B9\u51FB\u91CD\u542F\u6309\u94AE\u542F\u52A8\u670D\u52A1";
       }
       document.getElementById("metricCpu").textContent = (data.cpuPercent?.toFixed(1) || "0") + "%";
       document.getElementById("metricCpuBar").style.width = Math.min(data.cpuPercent || 0, 100) + "%";
       document.getElementById("metricMemory").textContent = (data.memoryMB?.toFixed(0) || "0") + " MB";
       document.getElementById("metricMemoryBar").style.width = Math.min((data.memoryMB || 0) / 20, 100) + "%";
-      document.getElementById("metricPid").textContent = data.pid || "--";
-      document.getElementById("metricPort").textContent = data.port || "--";
-      document.getElementById("metricPortStatus").textContent = data.portOpen ? "\u2713 \u76D1\u542C\u4E2D" : "\u2717 \u672A\u76D1\u542C";
-      document.getElementById("infoUptime").textContent = this.formatUptime(data.uptime);
-      document.getElementById("infoLastCheck").textContent = new Date(data.lastCheck).toLocaleTimeString("zh-CN");
-      document.getElementById("infoRestarts").textContent = data.restartCount || 0;
+      document.getElementById("metricUptime").textContent = this.formatUptime(data.uptime);
+      document.getElementById("metricLastCheck").textContent = new Date(data.lastCheck).toLocaleTimeString("zh-CN");
     }
     showError() {
       const banner = document.getElementById("statusBanner");
@@ -591,38 +459,16 @@
     }
     async handleRestart() {
       if (!confirm("\u786E\u8BA4\u8981\u91CD\u542F OpenClaw Gateway \u5417\uFF1F")) return;
-      await this.doAction("/api/gateway/restart", "\u91CD\u542F");
-    }
-    async handleStop() {
-      if (!confirm("\u786E\u8BA4\u8981\u505C\u6B62 OpenClaw Gateway \u5417\uFF1F")) return;
-      await this.doAction("/api/gateway/stop", "\u505C\u6B62");
-    }
-    async handleStart() {
-      await this.doAction("/api/gateway/start", "\u542F\u52A8");
-    }
-    async handleDiagnose() {
+      showToast("\u6B63\u5728\u91CD\u542F Gateway...", "info");
       try {
-        const res = await fetch(`${this.apiBase}/logs/errors?limit=10`);
-        const errors = await res.json();
-        if (errors.length === 0) {
-          alert("\u2705 \u672A\u53D1\u73B0\u9519\u8BEF");
-        } else {
-          alert(`\u53D1\u73B0 ${errors.length} \u6761\u9519\u8BEF\uFF0C\u8BF7\u67E5\u770B\u65E5\u5FD7\u9875\u9762`);
-        }
-      } catch (error) {
-        alert("\u8BCA\u65AD\u5931\u8D25: " + error.message);
-      }
-    }
-    async doAction(url, name) {
-      showToast(`\u6B63\u5728${name} Gateway...`, "info");
-      try {
-        const res = await fetch(url, { method: "POST" });
+        const res = await fetch("/api/gateway/restart", { method: "POST" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const result = await res.json();
-        showToast(result.message || `${name}\u547D\u4EE4\u5DF2\u53D1\u9001`, "success");
+        showToast(result.message || "\u91CD\u542F\u547D\u4EE4\u5DF2\u53D1\u9001", result.success ? "success" : "error");
+        await new Promise((resolve) => setTimeout(resolve, 5e3));
         await this.refresh();
       } catch (error) {
-        showToast(`${name}\u5931\u8D25: ` + error.message, "error");
+        showToast("\u91CD\u542F\u5931\u8D25: " + error.message, "error");
       }
     }
     formatUptime(uptime) {

@@ -65,10 +65,10 @@ export class TelegramBotService implements BotService {
       const expectedCommands = [
         { command: 'start', description: '开始使用监控服务' },
         { command: 'help', description: '显示帮助信息' },
-        { command: 'status', description: '查看运行状态' },
+        { command: 'status', description: '查看 OpenClaw 运行状态' },
         { command: 'logs', description: '查看最近日志' },
-        { command: 'doctor', description: '诊断问题' },
-        { command: 'restart', description: '重启 OpenClaw' },
+        { command: 'doctor', description: '诊断系统问题' },
+        { command: 'restart', description: '重启 OpenClaw Gateway' },
       ];
 
       // 检查是否需要更新（命令数量或内容不同）
@@ -168,6 +168,7 @@ export class TelegramBotService implements BotService {
 
     switch (command) {
       case '/start':
+      case '帮助':
         await this.sendMessage(chatId, this.getHelpMessage());
         break;
 
@@ -176,19 +177,27 @@ export class TelegramBotService implements BotService {
         break;
 
       case '/status':
+      case '状态':
         await this.handleStatus(chatId);
         break;
 
       case '/logs':
+      case '日志':
         await this.handleLogs(chatId, args);
         break;
 
       case '/doctor':
       case '/diagnose':
+      case '诊断':
         await this.handleDoctor(chatId, args);
         break;
 
+      case '修复':
+        await this.handleDoctor(chatId, 'fix');
+        break;
+
       case '/restart':
+      case '重启':
         await this.handleRestart(chatId);
         break;
 
@@ -246,74 +255,45 @@ export class TelegramBotService implements BotService {
   }
 
   private async handleDoctor(chatId: string, args: string): Promise<void> {
-    if (!this.monitor.isStarted()) {
-      await this.sendMessage(chatId, '监控服务未启动');
-      return;
-    }
+    const isFix = args === 'fix';
+    console.log(`[Telegram Bot] handleDoctor 被调用，args="${args}", isFix=${isFix}`);
+    const command = isFix ? 'openclaw doctor --fix' : 'openclaw doctor';
+    console.log(`[Telegram Bot] 将执行命令: ${command}`);
 
-    const status = await this.monitor.getStatus();
-    const logs = this.monitor.getRecentLines(50);
-    const errors = logs.filter(l => l.level === 'ERROR' || l.level === 'FATAL');
+    await this.sendMessage(chatId, `⏳ *正在${isFix ? '修复' : '诊断'} OpenClaw*...\n\n请稍候`);
 
-    let diagnosis: string[] = [];
+    try {
+      const { stdout, stderr } = await exec(command, { timeout: 60000 });
+      console.log(`[Telegram Bot] 命令执行完成，stdout 长度: ${stdout.length}, stderr 长度: ${stderr.length}`);
 
-    // 1. 进程状态检查
-    if (!status.running) {
-      diagnosis.push('🔴 *进程状态*: OpenClaw Gateway 未运行');
-    } else {
-      diagnosis.push(`✅ *进程状态*: 运行中 (PID: ${status.pid})`);
-    }
+      // 合并 stdout 和 stderr
+      const output = [stdout, stderr].filter(Boolean).join('\n');
 
-    // 2. 资源使用检查
-    if (status.running) {
-      if (status.cpuPercent > 80) {
-        diagnosis.push(`⚠️ *CPU 使用*: ${status.cpuPercent.toFixed(1)}% (偏高)`);
-      } else {
-        diagnosis.push(`✅ *CPU 使用*: ${status.cpuPercent.toFixed(1)}%`);
+      if (!output.trim()) {
+        await this.sendMessage(chatId, '*诊断结果*\n\n命令执行完成，但没有返回输出。');
+        return;
       }
 
-      if (status.memoryMB > 1024) {
-        diagnosis.push(`⚠️ *内存使用*: ${status.memoryMB.toFixed(0)} MB (偏高)`);
-      } else {
-        diagnosis.push(`✅ *内存使用*: ${status.memoryMB.toFixed(0)} MB`);
-      }
-    }
+      // 清理输出，移除 ANSI 颜色代码
+      let cleanOutput = output
+        .replace(/\x1b\[[0-9;]*m/g, '') // 移除 ANSI 颜色代码
+        .replace(/\[0m/g, '')           // 移除重置代码
+        .replace(/\[2K/g, '')           // 移除清除行代码
+        .replace(/\r\n?/g, '\n')         // 统一换行符
+        .trim();
 
-    // 3. 端口检查
-    if (status.port && !status.portOpen) {
-      diagnosis.push(`🔴 *端口状态*: ${status.port} 端口未监听`);
-    } else if (status.port) {
-      diagnosis.push(`✅ *端口状态*: ${status.port} 正常监听`);
-    }
+      // 移除多余的空行
+      cleanOutput = cleanOutput.replace(/\n{3,}/g, '\n\n');
 
-    // 4. 错误日志统计
-    if (errors.length > 0) {
-      diagnosis.push(`⚠️ *错误日志*: 最近发现 ${errors.length} 条错误`);
-      // 显示最近 3 条错误
-      const recentErrors = errors.slice(-3).map(e =>
-        `[${new Date(e.timestamp).toLocaleTimeString('zh-CN')}] ${e.message.substring(0, 80)}`
-      ).join('\n');
-      diagnosis.push(`最近错误:\n${recentErrors}`);
-    } else {
-      diagnosis.push(`✅ *错误日志*: 未发现错误`);
+      await this.sendMessage(chatId, `*诊断报告*\n\n\`\`\`${cleanOutput}\`\`\``);
+    } catch (error: any) {
+      await this.sendMessage(chatId,
+        '❌ *诊断失败*\n\n' +
+        `执行命令时出错：${error.message}\n\n` +
+        '请尝试手动执行：' +
+        `\`${args === 'fix' ? 'openclaw doctor --fix' : 'openclaw doctor'}\``
+      );
     }
-
-    // 处理 fix 参数
-    if (args === 'fix') {
-      diagnosis.push('\n🔧 *自动修复*');
-      diagnosis.push('抱歉，自动修复功能尚未实现。');
-      diagnosis.push('建议操作：');
-      if (!status.running) {
-        diagnosis.push('- 手动启动 OpenClaw Gateway');
-      }
-      if (errors.length > 0) {
-        diagnosis.push('- 检查 OpenClaw 配置文件');
-        diagnosis.push('- 查看完整日志排查问题');
-      }
-    }
-
-    const result = diagnosis.join('\n');
-    await this.sendMessage(chatId, `*诊断报告*\n\n${result}`);
   }
 
   private async handleRestart(chatId: string): Promise<void> {
@@ -380,18 +360,73 @@ export class TelegramBotService implements BotService {
 
   private async sendMessage(chatId: string, text: string): Promise<void> {
     try {
-      await this.fetchFn(`https://api.telegram.org/bot${this.config.botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text,
-          parse_mode: 'Markdown',
-        }),
-      });
+      // Telegram 文本消息长度限制约 4096 字符，超过则分片发送
+      const MAX_LENGTH = 3800; // 留一些余量
+      const messages = this.splitMessage(text, MAX_LENGTH);
+
+      for (const msg of messages) {
+        await this.fetchFn(`https://api.telegram.org/bot${this.config.botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: msg,
+            parse_mode: 'Markdown',
+          }),
+        });
+        // 分片之间稍微延迟，避免触发频率限制
+        if (messages.length > 1) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
     } catch (error) {
       console.error('[Telegram Bot] 发送消息失败:', (error as Error).message);
     }
+  }
+
+  private splitMessage(text: string, maxLength: number): string[] {
+    if (text.length <= maxLength) {
+      return [text];
+    }
+
+    const messages: string[] = [];
+    const lines = text.split('\n');
+    let currentMessage = '';
+
+    for (const line of lines) {
+      // 如果单行就超过限制，需要强制分割
+      if (line.length > maxLength) {
+        // 先保存当前消息
+        if (currentMessage) {
+          messages.push(currentMessage);
+          currentMessage = '';
+        }
+        // 按长度分割长行
+        let remaining = line;
+        while (remaining.length > 0) {
+          messages.push(remaining.substring(0, maxLength));
+          remaining = remaining.substring(maxLength);
+        }
+      } else {
+        // 检查添加这行是否会超出限制
+        if (currentMessage && currentMessage.length + line.length + 1 > maxLength) {
+          messages.push(currentMessage);
+          currentMessage = line;
+        } else {
+          if (currentMessage) {
+            currentMessage += '\n' + line;
+          } else {
+            currentMessage = line;
+          }
+        }
+      }
+    }
+
+    if (currentMessage) {
+      messages.push(currentMessage);
+    }
+
+    return messages;
   }
 
   private formatUptime(seconds?: number): string {
@@ -406,12 +441,12 @@ export class TelegramBotService implements BotService {
     return `*OpenClaw Monitor Bot* 🛡️
 
 *可用命令:*
-/status - 查看 OpenClaw 运行状态
-/logs [数量] - 查看最近日志 (默认5条，最多20条)
-/doctor - 诊断系统问题
-/doctor fix - 尝试自动修复问题
-/restart - 重启 OpenClaw
-/help - 显示此帮助
+/status 或 状态 - 查看 OpenClaw 运行状态
+/logs 或 日志 [数量] - 查看最近日志 (默认5条，最多20条)
+/doctor 或 诊断 - 诊断系统问题
+/doctor fix 或 修复 - 尝试自动修复问题
+/restart 或 重启 - 重启 OpenClaw Gateway
+/help 或 帮助 - 显示此帮助
 
 *Web UI*: http://localhost:37890`;
   }

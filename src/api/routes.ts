@@ -111,7 +111,16 @@ export const routes = async function(fastify: any, options: { monitor: OpenClawM
     const limit = query.limit ? parseInt(query.limit) : 100;
 
     const alerts = monitor.getAlertHistory(query.level as AlertLevel, limit);
-    return alerts;
+
+    // 手动序列化 Date 对象
+    return alerts.map(record => ({
+      ...record,
+      sentAt: record.sentAt.toISOString(),
+      alert: {
+        ...record.alert,
+        timestamp: record.alert.timestamp?.toISOString() || new Date().toISOString(),
+      },
+    }));
   });
 
   // 测试/触发告警
@@ -165,6 +174,126 @@ export const routes = async function(fastify: any, options: { monitor: OpenClawM
       return { success: true, message: `Alert ${type} sent` };
     } catch (error) {
       return reply.code(500).send({ error: (error as Error).message });
+    }
+  });
+
+  // Gateway 控制端点
+  fastify.post('/gateway/restart', async (request: any, reply: any) => {
+    const monitor = fastify.monitor as OpenClawMonitor;
+    if (!monitor || !monitor.isStarted()) {
+      return reply.code(503).send({ error: 'Monitor not started' });
+    }
+
+    try {
+      const status = await monitor.getStatus();
+
+      // 检查是否已安装服务
+      const { exec: execAsync } = await import('child_process');
+      const { promisify } = await import('util');
+      const exec = promisify(execAsync);
+
+      let serviceInstalled = false;
+      try {
+        const { stdout: statusOutput } = await exec('openclaw gateway status', { timeout: 10000 });
+        serviceInstalled = statusOutput.includes('loaded') || statusOutput.includes('running');
+      } catch {
+        // 服务可能未安装
+      }
+
+      if (!serviceInstalled) {
+        return reply.code(400).send({
+          success: false,
+          message: 'OpenClaw Gateway 服务未安装。请先执行: openclaw gateway install',
+        });
+      }
+
+      // 根据状态选择执行 start 或 restart 命令
+      const command = status.running ? 'openclaw gateway restart' : 'openclaw gateway start';
+      const { stdout, stderr } = await exec(command, { timeout: 30000 });
+
+      // 等待一段时间让进程启动
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      // 检查新状态
+      const newStatus = await monitor.getStatus();
+
+      return {
+        success: newStatus.running,
+        message: newStatus.running
+          ? `OpenClaw Gateway 已成功${status.running ? '重启' : '启动'}！`
+          : '命令已执行，但无法确认 Gateway 是否成功启动',
+        status: newStatus,
+        output: stdout || stderr || '无输出',
+      };
+    } catch (error) {
+      return reply.code(500).send({
+        success: false,
+        message: `操作失败: ${(error as Error).message}`,
+      });
+    }
+  });
+
+  fastify.post('/gateway/start', async (request: any, reply: any) => {
+    const monitor = fastify.monitor as OpenClawMonitor;
+    if (!monitor || !monitor.isStarted()) {
+      return reply.code(503).send({ error: 'Monitor not started' });
+    }
+
+    try {
+      const { exec: execAsync } = await import('child_process');
+      const { promisify } = await import('util');
+      const exec = promisify(execAsync);
+
+      const { stdout, stderr } = await exec('openclaw gateway start', { timeout: 30000 });
+
+      // 等待启动
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      const newStatus = await monitor.getStatus();
+
+      return {
+        success: newStatus.running,
+        message: newStatus.running ? 'OpenClaw Gateway 已启动！' : '命令已执行，但无法确认 Gateway 是否成功启动',
+        status: newStatus,
+        output: stdout || stderr || '无输出',
+      };
+    } catch (error) {
+      return reply.code(500).send({
+        success: false,
+        message: `启动失败: ${(error as Error).message}`,
+      });
+    }
+  });
+
+  fastify.post('/gateway/stop', async (request: any, reply: any) => {
+    const monitor = fastify.monitor as OpenClawMonitor;
+    if (!monitor || !monitor.isStarted()) {
+      return reply.code(503).send({ error: 'Monitor not started' });
+    }
+
+    try {
+      const { exec: execAsync } = await import('child_process');
+      const { promisify } = await import('util');
+      const exec = promisify(execAsync);
+
+      const { stdout, stderr } = await exec('openclaw gateway stop', { timeout: 30000 });
+
+      // 等待停止
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      const newStatus = await monitor.getStatus();
+
+      return {
+        success: !newStatus.running,
+        message: !newStatus.running ? 'OpenClaw Gateway 已停止！' : '命令已执行，但 Gateway 似乎仍在运行',
+        status: newStatus,
+        output: stdout || stderr || '无输出',
+      };
+    } catch (error) {
+      return reply.code(500).send({
+        success: false,
+        message: `停止失败: ${(error as Error).message}`,
+      });
     }
   });
 

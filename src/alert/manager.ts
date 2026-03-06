@@ -95,7 +95,6 @@ export class AlertManager {
       message: 'OpenClaw Gateway 进程已停止运行，请检查',
       timestamp: new Date(),
       metadata: {
-        pid: status.pid,
         lastCheck: status.lastCheck.toISOString(),
       },
     });
