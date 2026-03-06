@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli/index.ts",
+    "prepublishOnly": "npm run build",
     "start": "node dist/cli/index.js",
     "start:dev": "node dist/cli/index.js start --dev",
     "test": "vitest",
@@ -18,18 +19,16 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@fastify/static": "^9.0.0",
-    "@fastify/websocket": "^11.2.0",
+    "@fastify/static": "^6.0.0",
+    "@fastify/websocket": "^11.0.0",
+    "fastify": "^5.3.0",
     "@larksuiteoapi/node-sdk": "^1.59.0",
-    "fastify": "^5.8.1",
     "pidusage": "^3.0.2"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/pidusage": "^2.0.5",
-    "commander": "^12.1.0",
     "eslint": "^8.56.0",
-    "memfs": "^4.56.11",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^1.2.0"
