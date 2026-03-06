@@ -19,15 +19,12 @@
 
 ## ✨ 功能特性
 
-OpenClaw Monitor 是一个专为 OpenClaw Gateway 设计的监控工具，帮助你：
+OpenClaw Monitor 是一个专为 OpenClaw Gateway 设计的监控和远程工具，帮助你：
 
-- 📊 **实时监控** - CPU、内存、运行状态、端口监听，一目了然
-- 📝 **日志收集** - 自动收集 OpenClaw 日志，支持搜索和筛选
-- 🚨 **智能告警** - 进程异常、资源超限时自动通知
-- 💬 **多端通知** - Telegram、飞书双渠道，随时随地接收告警
-- 🌐 **Web 面板** - 现代化 Web UI，实时状态查看和控制
-- 🤖 **Bot 交互** - 通过 Bot 命令查询状态、查看日志、诊断问题、重启服务
+- 🚨 **实时监控与告警** - 监控openclaw运行状态、CPU、内存占用，异常时自动通知到Bot
+- 🤖 **远程管理** - 通过Bot远程查询openclaw运行状态、运行日志，并支持重启、诊断、修复操作
 - ⚡ **即开即用** - 简单配置，几分钟内完成部署
+- 💬 **多端通知** - Telegram、飞书
 
 ### 解决的问题
 
@@ -46,7 +43,7 @@ OpenClaw Monitor 是一个专为 OpenClaw Gateway 设计的监控工具，帮助
 ### 环境要求
 
 - **Node.js** >= 18.0.0
-- **OpenClaw Gateway** 已安装（生产环境）
+- 需要和 **OpenClaw Gateway** 部署在同一台机器
 
 ### 安装
 
@@ -61,14 +58,15 @@ npm install
 # 构建
 npm run build
 
-# 全局链接（可选，便于在任何位置使用）
+# 全局链接
 npm link
 ```
 
-### 配置
+### 配置与启动
 
 ```bash
 # 1. 初始化配置文件
+> 初始化后位置在 你的用户目录/.openclaw-monitor/config.json
 openclaw-monitor config init
 
 # 2. 编辑 config.json，填写你的 Bot 信息
@@ -76,29 +74,17 @@ openclaw-monitor config init
 #    - 设置 alerts.enabled = true
 
 # 3. 启动服务
-openclaw-monitor start
-```
+openclaw-monitor start/restart
 
+# 4. 查看运行日志
+你的用户目录/.openclaw-monitor/logs/openclaw-monitor.log
+
+# 5. web ui
 访问 http://localhost:37890 查看 Web 面板。
-
+```
 ---
 
 ## ⚙️ 配置说明
-
-### 最小配置示例
-
-```json
-{
-  "alerts": {
-    "enabled": true,
-    "feishu": {
-      "enabled": true,
-      "app_id": "cli_xxxxxxxxx",
-      "app_secret": "xxxxxxxxxx"
-    }
-  }
-}
-```
 
 ### Telegram Bot 配置
 
@@ -273,32 +259,7 @@ openclaw-monitor diagnose -n 20   # 诊断问题
 ## 📸 界面预览
 
 ### Web 面板
-
-```
-┌─────────────────────────────────────────────────────┐
-│  OpenClaw Monitor                                    │
-├─────────────────────────────────────────────────────┤
-│  状态监控 │ 日志查看 │ 配置管理 │ 告警历史            │
-├─────────────────────────────────────────────────────┤
-│                                                       │
-│  ✅ OpenClaw Gateway 运行中                           │
-│  PID: 12345 │ CPU: 12.3% │ 内存: 256 MB              │
-│                                                       │
-│  ┌─────────┬─────────┬─────────┬─────────┐           │
-│  │ CPU 使用 │ 内存使用 │ 进程 ID │ 服务端口 │           │
-│  │  ██████  │  ████   │  12345  │  8080 ✓ │           │
-│  └─────────┴─────────┴─────────┴─────────┘           │
-│                                                       │
-│  📈 賄源趋势图                                        │
-│  ┌─────────────────────────────────────────┐          │
-│  │    CPU ────                            │          │
-│  │    内存 ────                           │          │
-│  └─────────────────────────────────────────┘          │
-│                                                       │
-│  🎮 Gateway 控制                                    │
-│  [重启] [停止] [启动] [诊断]                         │
-└─────────────────────────────────────────────────────┘
-```
+等我截个图吧
 
 ---
 
@@ -317,8 +278,6 @@ openclaw-monitor diagnose -n 20   # 诊断问题
 ## 📋 待办事项
 
 - [ ] 发布到 npm registry
-- [ ] Docker 镜像支持
-- [ ] 多实例管理
 - [ ] 告警规则自定义
 - [ ] 更多告警渠道（钉钉、企业微信）
 - [ ] 数据持久化与历史图表
