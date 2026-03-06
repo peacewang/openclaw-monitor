@@ -80,7 +80,7 @@ export class ProcessMonitorImpl implements ProcessMonitor {
 
     try {
       const stats = await pidusage(pid);
-      const gatewayPort = env.config?.gateway?.port || env.gatewayPort;
+      const gatewayPort = env.config?.gateway?.port || env.gatewayPort || 18789; // OpenClaw Gateway default port
 
       return {
         pid,
@@ -91,7 +91,7 @@ export class ProcessMonitorImpl implements ProcessMonitor {
         uptime: stats.ctime ? Date.now() - stats.ctime : undefined,
         restartCount: this.currentStatus.restartCount,
         port: gatewayPort,
-        portOpen: gatewayPort ? await this.checkPort(gatewayPort) : false,
+        portOpen: await this.checkPort(gatewayPort),
         lastCheck: new Date(),
       };
     } catch {

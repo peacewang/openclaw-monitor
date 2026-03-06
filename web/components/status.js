@@ -654,9 +654,11 @@ export class StatusComponent {
 
   formatUptime(seconds) {
     if (!seconds) return '--';
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
+    // Convert to seconds if it's in milliseconds (larger than 1 day)
+    const value = seconds > 86400000 ? seconds / 1000 : seconds;
+    const days = Math.floor(value / 86400);
+    const hours = Math.floor((value % 86400) / 3600);
+    const minutes = Math.floor((value % 3600) / 60);
     if (days > 0) return `${days}天 ${hours}小时`;
     if (hours > 0) return `${hours}小时 ${minutes}分钟`;
     return `${minutes}分钟`;

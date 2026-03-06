@@ -28,10 +28,15 @@ export class OpenClawEnvDetectorImpl implements OpenClawEnvDetector {
   private async detectByCommand(): Promise<OpenClawEnv | null> {
     try {
       const { stdout } = await execAsync('openclaw --version');
+      const configPath = this.getConfigPath();
+      const config = await this.loadConfigIfExists(configPath);
+
       return {
         installed: true,
         version: stdout.trim(),
-        configPath: this.getConfigPath(),
+        configPath,
+        config,
+        gatewayPort: config?.gateway?.port,
       };
     } catch {
       return null;
@@ -40,6 +45,8 @@ export class OpenClawEnvDetectorImpl implements OpenClawEnvDetector {
 
   private async detectByPath(): Promise<OpenClawEnv | null> {
     const paths = OpenClawPaths.getExecutablePaths();
+    const configPath = this.getConfigPath();
+    const config = await this.loadConfigIfExists(configPath);
 
     for (const exePath of paths) {
       try {
@@ -47,7 +54,9 @@ export class OpenClawEnvDetectorImpl implements OpenClawEnvDetector {
         return {
           installed: true,
           executablePath: exePath,
-          configPath: this.getConfigPath(),
+          configPath,
+          config,
+          gatewayPort: config?.gateway?.port,
         };
       } catch {
         continue;
@@ -60,9 +69,12 @@ export class OpenClawEnvDetectorImpl implements OpenClawEnvDetector {
     const configPath = this.getConfigPath();
     try {
       await fs.access(configPath);
+      const config = await this.loadConfigIfExists(configPath);
       return {
         installed: true,
         configPath,
+        config,
+        gatewayPort: config?.gateway?.port,
       };
     } catch {
       return null;
@@ -94,5 +106,15 @@ export class OpenClawEnvDetectorImpl implements OpenClawEnvDetector {
     }
 
     return existing;
+  }
+
+  private async loadConfigIfExists(configPath: string): Promise<OpenClawConfig | undefined> {
+    try {
+      const content = await fs.readFile(configPath, 'utf-8');
+      const config = JSON.parse(content);
+      return config as OpenClawConfig;
+    } catch {
+      return undefined;
+    }
   }
 }

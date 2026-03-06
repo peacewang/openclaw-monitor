@@ -105,6 +105,26 @@
   color: var(--text-secondary);
 }
 
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  max-width: 400px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
 /* 告警列表 */
 .filter-bar {
   display: flex;
@@ -246,6 +266,77 @@
 .form-input[type="checkbox"] {
   width: auto;
   margin-right: 8px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* 告警渠道配置 */
+.alert-channels {
+  margin-top: 16px;
+}
+
+.alert-channels h4 {
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.channel-config {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.channel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.channel-header .form-label {
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+}
+
+.channel-status {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.channel-status.enabled {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.channel-status.configured {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+}
+
+.channel-status.not-configured {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
+
+.channel-fields {
+  display: grid;
+  gap: 12px;
 }
 
 /* 按钮 */

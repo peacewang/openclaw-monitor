@@ -46,11 +46,15 @@ export class LogsComponent {
   async loadLogs() {
     try {
       const res = await fetch(`${this.apiBase}/logs?n=100`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        this.renderLogs([]);
+        return;
+      }
       const logs = await res.json();
-      this.renderLogs(logs);
+      this.renderLogs(logs || []);
     } catch (error) {
       console.error('Failed to load logs:', error);
+      this.renderLogs([]);
     }
   }
 
@@ -83,8 +87,18 @@ export class LogsComponent {
 
   renderLogs(logs) {
     const container = document.getElementById('logs-list');
+    if (!container) return;
+
     if (!logs || logs.length === 0) {
-      container.innerHTML = '<div class="empty-state">暂无日志</div>';
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">暂无日志</div>
+          <div class="empty-description">
+            当前没有可显示的日志。请确保 OpenClaw Gateway 正在运行并产生日志。
+          </div>
+        </div>
+      `;
       return;
     }
 

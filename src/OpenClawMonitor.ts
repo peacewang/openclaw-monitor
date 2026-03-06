@@ -14,12 +14,8 @@ import { TelegramBotService } from './bot/telegram.js';
 import { FeishuBotService } from './bot/feishu.js';
 import type { BotService } from './bot/types.js';
 
-export interface DevModeConfig {
-  devMode?: boolean;
-}
-
 export class OpenClawMonitor {
-  private config: MonitorConfig & DevModeConfig;
+  private config: MonitorConfig;
   private envDetector: OpenClawEnvDetectorImpl;
   private processMonitor?: ProcessMonitorImpl;
   private logCollector?: LogCollectorImpl;
@@ -29,7 +25,7 @@ export class OpenClawMonitor {
   private started = false;
   private unsubscribeStatusChange?: () => void;
 
-  constructor(config?: Partial<MonitorConfig & DevModeConfig>) {
+  constructor(config?: Partial<MonitorConfig>) {
     this.config = this.mergeConfig(config);
     this.envDetector = new OpenClawEnvDetectorImpl();
   }
@@ -39,32 +35,23 @@ export class OpenClawMonitor {
       throw new Error('Monitor already started');
     }
 
-    const isDevMode = this.config.devMode ?? false;
-
-    // 开发模式：跳过环境检测，只启动 Web API
-    if (isDevMode) {
-      console.log('🚀 开发模式已启用 - 跳过 OpenClaw 环境检测');
-    } else {
-      // 检测 OpenClaw 环境
-      const env = await this.envDetector.detect();
-      if (!env.installed) {
-        throw new Error('OpenClaw not installed or not found\n\n提示: 使用 --dev 参数启动开发模式，无需 OpenClaw Gateway');
-      }
+    // 检测 OpenClaw 环境
+    const env = await this.envDetector.detect();
+    if (!env.installed) {
+      throw new Error('OpenClaw not installed or not found');
     }
 
     // 加载配置
     const loader = new ConfigLoader();
-    this.config = { ...this.config, ...(await loader.load()), devMode: isDevMode };
+    this.config = { ...this.config, ...(await loader.load()) };
 
     // 启动进程监控
-    if (!isDevMode) {
-      this.processMonitor = new ProcessMonitorImpl(this.envDetector, this.config);
-      await this.processMonitor.start();
+    this.processMonitor = new ProcessMonitorImpl(this.envDetector, this.config);
+    await this.processMonitor.start();
 
-      // 启动日志收集
-      this.logCollector = new LogCollectorImpl(this.envDetector, this.config);
-      await this.logCollector.start();
-    }
+    // 启动日志收集
+    this.logCollector = new LogCollectorImpl(this.envDetector, this.config);
+    await this.logCollector.start();
 
     // 初始化告警管理器
     this.alertManager = new AlertManager(this.config);
@@ -116,37 +103,35 @@ export class OpenClawMonitor {
 
   async getStatus(): Promise<ProcessStatus> {
     if (!this.processMonitor) {
-      // 开发模式返回模拟状态
-      return this.createMockStatus();
+      throw new Error('Process monitor not started');
     }
     return this.processMonitor.getStatus();
   }
 
   getRecentLines(n: number): LogLine[] {
     if (!this.logCollector) {
-      return this.createMockLogs(n);
+      throw new Error('Log collector not started');
     }
     return this.logCollector.getRecentLines(n);
   }
 
   searchLogs(pattern: string, limit?: number): LogLine[] {
     if (!this.logCollector) {
-      return this.createMockLogs(limit || 10);
+      throw new Error('Log collector not started');
     }
     return this.logCollector.search(pattern, limit);
   }
 
   getErrorLogs(limit?: number): LogLine[] {
     if (!this.logCollector) {
-      return this.createMockLogs(limit || 10).filter(l => l.level === 'ERROR' || l.level === 'FATAL');
+      throw new Error('Log collector not started');
     }
     return this.logCollector.getErrors(limit);
   }
 
   onStatusChange(callback: (event: ProcessEvent) => void): () => void {
     if (!this.processMonitor) {
-      // 开发模式：返回空订阅函数
-      return () => {};
+      throw new Error('Process monitor not started');
     }
     return this.processMonitor.subscribe(callback);
   }
@@ -249,35 +234,9 @@ export class OpenClawMonitor {
     }
   }
 
-  private createMockStatus(): ProcessStatus {
-    return {
-      running: false,
-      cpuPercent: 0,
-      memoryMB: 0,
-      restartCount: 0,
-      portOpen: false,
-      lastCheck: new Date(),
-    };
-  }
-
-  private createMockLogs(count: number): LogLine[] {
-    const logs: LogLine[] = [];
-    const now = Date.now();
-    for (let i = 0; i < count; i++) {
-      logs.push({
-        timestamp: new Date(now - i * 60000),
-        level: 'INFO',
-        message: `[开发模式] 模拟日志 ${i + 1} - 这是一个示例日志消息`,
-        source: 'stdout',
-        lineNum: i + 1,
-      });
-    }
-    return logs;
-  }
-
-  private mergeConfig(userConfig?: Partial<MonitorConfig & DevModeConfig>): MonitorConfig & DevModeConfig {
+  private mergeConfig(userConfig?: Partial<MonitorConfig>): MonitorConfig {
     // 基础默认配置
-    const base: MonitorConfig & DevModeConfig = {
+    const base: MonitorConfig = {
       monitoring: {
         enabled: true,
         interval: 5,
@@ -298,7 +257,6 @@ export class OpenClawMonitor {
       alerts: {
         enabled: false,
       },
-      devMode: false,
     };
 
     if (!userConfig) {
@@ -312,7 +270,6 @@ export class OpenClawMonitor {
       openclaw: { ...base.openclaw, ...userConfig.openclaw },
       web: userConfig.web ? { ...base.web, ...userConfig.web } : base.web,
       alerts: userConfig.alerts ? { ...base.alerts, ...userConfig.alerts } : base.alerts,
-      devMode: userConfig.devMode ?? base.devMode,
     };
   }
 
