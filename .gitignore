@@ -1,0 +1,18 @@
+.gitignore
+.gitattributes
+
+# Claude Code
+.claude/
+
+# Node
+node_modules/
+dist/
+*.log
+.env
+*.tsbuildinfo
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
+
