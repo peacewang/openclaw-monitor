@@ -58,23 +58,61 @@ npm run start:dev    # 开发模式（无需 OpenClaw）
 npm run start        # 生产模式（需要 OpenClaw Gateway）
 ```
 
-### 方式三：本地全局链接
+---
+
+## 快速开始
+
+### 1. 初始化配置
 
 ```bash
-# 在项目目录下执行
-npm link
-
-# 然后可以在任何地方使用
-openclaw-monitor --help
+openclaw-monitor config init
 ```
+
+此命令会创建 `config.json` 文件，包含默认配置模板。
+
+**防覆盖保护**：如果 `config.json` 已存在，命令会提示不会覆盖。如需重新生成，使用：
+
+```bash
+openclaw-monitor config init --force
+```
+
+### 2. 编辑配置文件
+
+打开 `config.json`，填写你的配置信息：
+
+```json
+{
+  "alerts": {
+    "enabled": true,              // 设置为 true 启用告警
+    "telegram": {
+      "enabled": true,            // 启用 Telegram
+      "botToken": "你的_BOT_TOKEN",
+      "chatId": "你的_CHAT_ID"
+    },
+    "feishu": {
+      "enabled": true,            // 启用飞书
+      "app_id": "你的_APP_ID",
+      "app_secret": "你的_APP_SECRET"
+    }
+  }
+}
+```
+
+至少配置一个告警渠道（telegram 或 feishu）。
+
+### 3. 启动服务
+
+```bash
+openclaw-monitor start --dev
+```
+
+访问 http://localhost:37890 查看 Web UI。
 
 ---
 
-## 配置
+## 配置说明
 
-### 1. 创建配置文件
-
-在项目根目录或用户目录创建 `config.json`：
+### 完整配置示例
 
 ```json
 {
@@ -87,6 +125,9 @@ openclaw-monitor --help
       "memory": { "warning": 1024, "critical": 2048 }
     }
   },
+  "openclaw": {
+    "autoDetect": true
+  },
   "web": {
     "enabled": true,
     "port": 37890,
@@ -96,21 +137,60 @@ openclaw-monitor --help
     "enabled": true,
     "telegram": {
       "enabled": false,
-      "botToken": "your_bot_token",
-      "chatId": "your_chat_id"
+      "botToken": "从_BotFather_获取的_Token",
+      "chatId": "你的_Chat_ID",
+      "proxy": ""
     },
     "feishu": {
       "enabled": false,
-      "app_id": "cli_xxxxxxxxx",
-      "app_secret": "xxxxxxxxxx"
+      "app_id": "飞书应用的_App_ID",
+      "app_secret": "飞书应用的_App_Secret"
     }
   }
 }
 ```
 
-### 2. 飞书 Bot 配置（详细步骤）
+### 配置项说明
 
-#### 2.1 创建应用
+#### monitoring（监控配置）
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| enabled | boolean | true | 是否启用监控 |
+| interval | number | 5 | 检测间隔（秒） |
+| logLines | number | 100 | 保留日志行数 |
+| thresholds | object | - | 告警阈值 |
+
+#### thresholds（告警阈值）
+
+```json
+{
+  "cpu": { "warning": 80, "critical": 95 },
+  "memory": { "warning": 1024, "critical": 2048 }
+}
+```
+
+#### web（Web UI 配置）
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| enabled | boolean | true | 是否启用 Web UI |
+| port | number | 37890 | Web 服务端口 |
+| host | string | 0.0.0.0 | 监听地址 |
+
+#### alerts（告警配置）
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| enabled | boolean | false | 是否启用告警 |
+| telegram | object | - | Telegram Bot 配置 |
+| feishu | object | - | 飞书 Bot 配置 |
+
+---
+
+## 飞书 Bot 配置（详细步骤）
+
+### 1. 创建应用
 
 1. 访问 [飞书开放平台](https://open.feishu.cn/)
 2. 登录后进入「开发者后台」
@@ -118,7 +198,7 @@ openclaw-monitor --help
 4. 填写应用名称（如：OpenClaw Monitor），选择所属企业
 5. 创建后记录 `App ID` 和 `App Secret`（在「凭证与基础信息」页面）
 
-#### 2.2 申请权限
+### 2. 申请权限
 
 在应用的「权限管理」页面，申请以下权限：
 
@@ -129,7 +209,7 @@ openclaw-monitor --help
 
 > 点击「申请权限」，选择「全员可访问」或指定成员
 
-#### 2.3 发布应用
+### 3. 发布应用
 
 1. 进入「版本管理与发布」
 2. 点击「创建版本」
@@ -137,13 +217,11 @@ openclaw-monitor --help
 4. 点击「申请发布」
 5. **审核通过后**，在「可用范围」中选择「全员可用」或指定成员
 
-#### 2.4 配置事件订阅（重要！）
+### 4. 配置事件订阅（重要！）
 
 1. **先启动 openclaw-monitor 服务**：
    ```bash
    openclaw-monitor start --dev
-   # 或
-   npm run start:dev
    ```
    等待看到日志：`[Feishu Bot] WebSocket 长连接已启动`
 
@@ -162,7 +240,7 @@ openclaw-monitor --help
 
 > ⚠️ **重要**：必须先启动服务建立长连接，再保存事件订阅配置！否则飞书无法推送事件到你的服务。
 
-#### 2.5 配置文件
+### 5. 填写配置
 
 将 `App ID` 和 `App Secret` 填入 `config.json`：
 
@@ -179,14 +257,16 @@ openclaw-monitor --help
 }
 ```
 
-#### 2.6 测试
+### 6. 测试
 
 1. 重启 openclaw-monitor
 2. 在飞书中搜索你的应用名称
 3. 发送「帮助」或 `/help`
 4. 应该收到帮助消息
 
-### 3. Telegram Bot 配置
+---
+
+## Telegram Bot 配置
 
 1. 给 [@BotFather](https://t.me/botfather) 发送 `/newbot` 创建 Bot
 2. 获取 `botToken`
@@ -216,9 +296,8 @@ openclaw-monitor --help
 
 | 页面 | 功能 |
 |------|------|
-| 状态监控 | 实时查看进程状态、CPU、内存 |
+| 状态监控 | 实时查看进程状态、CPU、内存、控制 Gateway |
 | 日志查看 | 搜索和筛选日志 |
-| Gateway 管理 | 重启/停止 OpenClaw（生产模式） |
 | 配置管理 | 在线修改配置 |
 | 告警历史 | 查看历史告警，发送测试告警 |
 
@@ -250,6 +329,9 @@ openclaw-monitor --help
 ### CLI 命令
 
 ```bash
+# 初始化配置
+openclaw-monitor config init
+
 # 启动监控
 openclaw-monitor start --dev     # 开发模式
 openclaw-monitor start            # 生产模式
@@ -258,10 +340,13 @@ openclaw-monitor start            # 生产模式
 openclaw-monitor status
 
 # 查看日志
-openclaw-monitor logs
+openclaw-monitor logs -n 100
 
 # 诊断问题
-openclaw-monitor diagnose
+openclaw-monitor diagnose -n 20
+
+# 显示帮助
+openclaw-monitor help
 ```
 
 ---

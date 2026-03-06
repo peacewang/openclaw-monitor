@@ -1,8 +1,13 @@
 {
+  "$comment": "OpenClaw Monitor 配置文件 - 复制此文件为 config.json 并填写你的信息",
   "monitoring": {
     "enabled": true,
     "interval": 5,
-    "logLines": 100
+    "logLines": 100,
+    "thresholds": {
+      "cpu": { "warning": 80, "critical": 95 },
+      "memory": { "warning": 1024, "critical": 2048 }
+    }
   },
   "openclaw": {
     "autoDetect": true
@@ -13,16 +18,17 @@
     "host": "0.0.0.0"
   },
   "alerts": {
-    "enabled": true,
+    "enabled": false,
     "telegram": {
-      "enabled": true,
-      "botToken": "你的_BOT_TOKEN",
-      "chatId": "你的_CHAT_ID"
+      "enabled": false,
+      "botToken": "从_BotFather_获取的_Token",
+      "chatId": "你的_Chat_ID",
+      "proxy": ""
     },
     "feishu": {
       "enabled": false,
-      "webhook": "你的_飞书_WEBHOOK_URL",
-      "secret": "可选的_验证密钥"
+      "app_id": "飞书应用的_App_ID",
+      "app_secret": "飞书应用的_App_Secret"
     }
   }
 }

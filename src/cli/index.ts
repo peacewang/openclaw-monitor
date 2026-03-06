@@ -2,20 +2,22 @@
 // src/cli/index.ts
 
 import { OpenClawMonitor } from '../OpenClawMonitor.js';
+import { existsSync, readFileSync, writeFileSync, copyFileSync } from 'fs';
+import { resolve } from 'path';
 
 const args = process.argv.slice(2);
 const command = args[0];
 
 function showHelp() {
   console.log(`
-OpenClaw Gateway 监控工具 v0.1.0
+OpenClaw Gateway 监控工具 v1.0.0
 
 用法: openclaw-monitor <command> [options]
 
 命令:
+  config init    初始化配置文件 (config.json)
   start           启动监控服务
   start --dev     启动开发模式 (无需 OpenClaw Gateway)
-  stop            停止监控服务
   status          查看运行状态
   logs [-n 50]     查看最近日志
   diagnose [-n 20] 诊断问题
@@ -24,14 +26,62 @@ OpenClaw Gateway 监控工具 v0.1.0
 选项:
   -n, --lines      显示的日志/错误行数
   --dev, -d        开发模式 (跳过环境检测)
+  -f, --force      强制覆盖配置文件
 
 示例:
+  openclaw-monitor config init
   openclaw-monitor start
   openclaw-monitor start --dev
   openclaw-monitor status
   openclaw-monitor logs -n 100
   openclaw-monitor diagnose
   `);
+}
+
+async function cmdConfigInit(force = false) {
+  const configPath = resolve(process.cwd(), 'config.json');
+  const examplePath = resolve(process.cwd(), 'config.example.json');
+
+  // 检查示例文件是否存在
+  if (!existsSync(examplePath)) {
+    console.error('错误: config.example.json 文件不存在');
+    console.log('请确保在 openclaw-monitor 项目目录中运行此命令');
+    process.exit(1);
+  }
+
+  // 检查配置文件是否已存在
+  if (existsSync(configPath)) {
+    if (force) {
+      console.log('警告: 强制覆盖现有配置文件');
+    } else {
+      console.log('配置文件 config.json 已存在');
+      console.log('如需重新生成，请使用:');
+      console.log('  openclaw-monitor config init --force');
+      process.exit(1);
+    }
+  }
+
+  // 读取示例配置
+  const exampleConfig = readFileSync(examplePath, 'utf-8');
+  const config = JSON.parse(exampleConfig);
+
+  // 移除 $comment 字段
+  delete (config as any).$comment;
+
+  // 写入配置文件
+  writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+
+  console.log('✓ 配置文件已创建: config.json');
+  console.log('');
+  console.log('下一步:');
+  console.log('  1. 编辑 config.json，填写你的配置信息');
+  console.log('  2. 至少配置一个告警渠道 (telegram 或 feishu)');
+  console.log('  3. 运行: openclaw-monitor start --dev');
+  console.log('');
+  console.log('配置说明:');
+  console.log('  - alerts.enabled: 设置为 true 启用告警');
+  console.log('  - telegram: 配置 Telegram Bot (可选)');
+  console.log('  - feishu: 配置飞书 Bot (可选)');
 }
 
 async function cmdStart(devMode = false) {
@@ -162,8 +212,20 @@ function formatUptime(seconds?: number): string {
 async function main() {
   const command = args[0]?.toLowerCase();
   const hasDevFlag = args.includes('--dev') || args.includes('-d');
+  const hasForceFlag = args.includes('--force') || args.includes('-f');
 
   switch (command) {
+    case 'config':
+      const subCommand = args[1]?.toLowerCase();
+      if (subCommand === 'init') {
+        await cmdConfigInit(hasForceFlag);
+      } else {
+        console.log(`未知命令: config ${subCommand}`);
+        console.log('可用子命令: init');
+        process.exit(1);
+      }
+      break;
+
     case 'start':
       await cmdStart(hasDevFlag);
       break;
