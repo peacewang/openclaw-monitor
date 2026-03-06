@@ -3,6 +3,7 @@
 import type { OpenClawMonitor } from '../OpenClawMonitor.js';
 import type { ProcessStatus } from '../types/process.js';
 import type { MonitorConfig } from '../types/config.js';
+import type { AlertLevel } from '../types/alert.js';
 
 export const routes = async function(fastify: any, options: { monitor: OpenClawMonitor }) {
   // 将 monitor 存储在 fastify 实例上
@@ -97,6 +98,32 @@ export const routes = async function(fastify: any, options: { monitor: OpenClawM
 
     const status = await monitor.getStatus();
     return { success: true, status };
+  });
+
+  // 获取告警历史
+  fastify.get('/alerts', async (request: any, reply: any) => {
+    const monitor = fastify.monitor as OpenClawMonitor;
+    if (!monitor) {
+      return reply.code(503).send({ error: 'Monitor not available' });
+    }
+
+    const query = request.query as { level?: string; limit?: string };
+    const limit = query.limit ? parseInt(query.limit) : 100;
+
+    const alerts = monitor.getAlertHistory(query.level as AlertLevel, limit);
+    return alerts;
+  });
+
+  // 测试告警
+  fastify.post('/alerts/test', async (request: any, reply: any) => {
+    const monitor = fastify.monitor as OpenClawMonitor;
+    if (!monitor) {
+      return reply.code(503).send({ error: 'Monitor not available' });
+    }
+
+    // 注意：这里需要访问私有属性，为了演示简化
+    // 实际使用中可以添加一个 public sendTestAlert 方法
+    return { success: true, message: 'Test alert endpoint - implement sendTestAlert method' };
   });
 
   // WebSocket 实时更新

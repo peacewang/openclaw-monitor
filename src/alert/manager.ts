@@ -20,6 +20,7 @@ export class AlertManager {
   private channels: AlertChannel[] = [];
   private history: AlertRecord[] = [];
   private lastAlertTime = new Map<string, number>();
+  private maxHistory = 1000;
 
   constructor(private config: MonitorConfig) {
     this.initializeChannels();
@@ -74,8 +75,14 @@ export class AlertManager {
     }
   }
 
-  getHistory(limit?: number): AlertRecord[] {
-    return limit ? this.history.slice(-limit) : this.history;
+  getHistory(level?: AlertLevel, limit = 100): AlertRecord[] {
+    let filtered = this.history;
+
+    if (level) {
+      filtered = filtered.filter((record) => record.alert.level === level);
+    }
+
+    return filtered.slice(-limit).reverse();
   }
 
   async sendProcessAlert(status: ProcessStatus): Promise<void> {
@@ -138,11 +145,11 @@ export class AlertManager {
       error,
     };
 
-    this.history.push(record);
+    this.history.unshift(record);
 
-    // 保留最近 100 条记录
-    if (this.history.length > 100) {
-      this.history.shift();
+    // 保留最近 maxHistory 条记录
+    if (this.history.length > this.maxHistory) {
+      this.history.pop();
     }
   }
 }

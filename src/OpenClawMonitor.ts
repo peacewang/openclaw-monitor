@@ -3,17 +3,20 @@
 import type { MonitorConfig } from './types/config.js';
 import type { ProcessStatus, ProcessEvent } from './types/process.js';
 import type { LogLine } from './types/log.js';
+import type { AlertLevel } from './types/alert.js';
 import { ConfigLoader } from './config/loader.js';
 import { OpenClawEnvDetectorImpl } from './env/detector.js';
 import { ProcessMonitorImpl } from './monitor/process.js';
 import { LogCollectorImpl } from './monitor/log.js';
 import { ApiServer } from './api/server.js';
+import { AlertManager, AlertRecord } from './alert/manager.js';
 
 export class OpenClawMonitor {
   private config: MonitorConfig;
   private envDetector: OpenClawEnvDetectorImpl;
   private processMonitor?: ProcessMonitorImpl;
   private logCollector?: LogCollectorImpl;
+  private alertManager?: AlertManager;
   private apiServer?: ApiServer;
   private started = false;
 
@@ -44,6 +47,9 @@ export class OpenClawMonitor {
     // 启动日志收集
     this.logCollector = new LogCollectorImpl(this.envDetector, this.config);
     await this.logCollector.start();
+
+    // 初始化告警管理器
+    this.alertManager = new AlertManager(this.config);
 
     // 启动 Web API
     if (this.config.web?.enabled) {
@@ -127,6 +133,15 @@ export class OpenClawMonitor {
     if (partial.openclaw) {
       this.config.openclaw = { ...this.config.openclaw, ...partial.openclaw };
     }
+
+    // 如果告警配置变化，重新初始化告警管理器
+    if (partial.alerts && this.alertManager) {
+      this.alertManager = new AlertManager(this.config);
+    }
+  }
+
+  getAlertHistory(level?: AlertLevel, limit = 100): AlertRecord[] {
+    return this.alertManager?.getHistory(level, limit) ?? [];
   }
 
   getWebUrl(): string | null {
