@@ -14,25 +14,28 @@ OpenClaw Gateway 监控工具 v0.1.0
 
 命令:
   start           启动监控服务
+  start --dev     启动开发模式 (无需 OpenClaw Gateway)
   stop            停止监控服务
   status          查看运行状态
-  logs [-n 50]      查看最近日志
-  diagnose [-n 20]  诊断问题
+  logs [-n 50]     查看最近日志
+  diagnose [-n 20] 诊断问题
   help            显示此帮助
 
 选项:
   -n, --lines      显示的日志/错误行数
+  --dev, -d        开发模式 (跳过环境检测)
 
 示例:
   openclaw-monitor start
+  openclaw-monitor start --dev
   openclaw-monitor status
   openclaw-monitor logs -n 100
   openclaw-monitor diagnose
   `);
 }
 
-async function cmdStart() {
-  const monitor = new OpenClawMonitor();
+async function cmdStart(devMode = false) {
+  const monitor = new OpenClawMonitor({ devMode });
 
   process.on('SIGINT', async () => {
     console.log('\n正在停止监控服务...');
@@ -49,6 +52,9 @@ async function cmdStart() {
     console.log('OpenClaw Monitor 已启动');
     console.log('====================================');
     console.log(`Web UI: ${webUrl || 'N/A'}`);
+    if (devMode) {
+      console.log('模式: 开发模式 (模拟数据)');
+    }
     console.log('按 Ctrl+C 停止服务');
   } catch (error) {
     console.error('启动失败:', error instanceof Error ? error.message : String(error));
@@ -155,10 +161,11 @@ function formatUptime(seconds?: number): string {
 // 解析命令行参数
 async function main() {
   const command = args[0]?.toLowerCase();
+  const hasDevFlag = args.includes('--dev') || args.includes('-d');
 
   switch (command) {
     case 'start':
-      await cmdStart();
+      await cmdStart(hasDevFlag);
       break;
 
     case 'stop':
