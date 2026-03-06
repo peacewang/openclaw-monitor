@@ -5,7 +5,7 @@ import { OpenClawMonitor } from '../OpenClawMonitor.js';
 import { existsSync, readFileSync, writeFileSync, copyFileSync, unlinkSync } from 'fs';
 import { resolve, join } from 'path';
 import { spawn, execSync } from 'child_process';
-import { tmpdir } from 'os';
+import { tmpdir, homedir } from 'os';
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -127,8 +127,11 @@ function isProcessRunning(pid: number): boolean {
 }
 
 async function cmdStart(daemonMode = true) {
+  // 如果是由守护进程启动的子进程，不进入守护进程模式
+  const isDaemonChild = process.env.OPENCLAW_MONITOR_DAEMON === '1';
+
   // Daemon模式：使用跨平台的后台运行
-  if (daemonMode) {
+  if (daemonMode && !isDaemonChild) {
     // 检查是否已有实例在运行
     const existingPid = getPid();
     if (existingPid && isProcessRunning(existingPid)) {
@@ -138,11 +141,11 @@ async function cmdStart(daemonMode = true) {
     }
 
     const logFile = resolve(tmpdir(), 'openclaw-monitor.log');
-    const args = process.argv.slice(1).filter(arg => arg !== '--daemon');
+    // 强制使用 'start' 命令启动守护进程，避免 restart 递归
+    const args = [process.argv[1], 'start'];
 
     try {
       // 使用跨平台的 Node.js 后台运行方式
-      const { spawn } = require('child_process');
       const child = spawn(process.argv[0], args, {
         detached: true,
         stdio: ['ignore', 'ignore', 'ignore'],
@@ -177,7 +180,6 @@ async function cmdStart(daemonMode = true) {
   // 前台模式 - 检查是否已有实例在运行
   // 注意：由daemon启动的子进程跳过此检查
   const existingPid = getPid();
-  const isDaemonChild = process.env.OPENCLAW_MONITOR_DAEMON === '1' && process.env.OPENCLAW_MONITOR_LOG;
 
   if (!isDaemonChild && existingPid && isProcessRunning(existingPid)) {
     console.log(`监控服务已在运行 (PID: ${existingPid})`);
@@ -233,23 +235,25 @@ async function cmdStatus() {
   if (monitorPid && isProcessRunning(monitorPid)) {
     console.log(`状态: 运行中 ✓`);
     console.log(`PID: ${monitorPid}`);
-    console.log(`运行模式: ${process.env.OPENCLAW_MONITOR_DAEMON ? '守护进程' : '前台'}`);
+    console.log(`运行模式: 守护进程 (后台运行)`);
 
-    // 尝试获取更多信息
+    // 通过 Web API 获取状态，而不是启动新实例
     try {
-      const monitor = new OpenClawMonitor();
-      await monitor.start();
-      const status = await monitor.getStatus();
-      console.log(`OpenClaw Gateway: ${status.running ? '运行中 ✓' : '已停止 ✗'}`);
-      if (status.running) {
-        console.log(`  PID: ${status.pid || 'N/A'}`);
-        console.log(`  CPU: ${status.cpuPercent.toFixed(1)}%`);
-        console.log(`  内存: ${status.memoryMB.toFixed(0)} MB`);
-        console.log(`  端口: ${status.port || 'N/A'} ${status.portOpen ? '✓' : '✗'}`);
+      const response = await fetch('http://127.0.0.1:37890/api/status');
+      if (response.ok) {
+        const data = await response.json() as { running?: boolean; pid?: number; cpuPercent?: number; memoryMB?: number; port?: number; portOpen?: boolean };
+        console.log(`OpenClaw Gateway: ${data.running ? '运行中 ✓' : '已停止 ✗'}`);
+        if (data.running) {
+          console.log(`  PID: ${data.pid || 'N/A'}`);
+          console.log(`  CPU: ${data.cpuPercent?.toFixed(1) || 'N/A'}%`);
+          console.log(`  内存: ${data.memoryMB?.toFixed(0) || 'N/A'} MB`);
+          console.log(`  端口: ${data.port || 'N/A'} ${data.portOpen ? '✓' : '✗'}`);
+        }
+      } else {
+        console.log('OpenClaw Gateway: 无法获取状态 (API 返回错误)');
       }
-      await monitor.stop();
     } catch {
-      console.log('OpenClaw Gateway: 无法获取状态');
+      console.log('OpenClaw Gateway: Web API 未就绪或无法访问');
     }
   } else {
     console.log(`状态: 未运行 ✗`);
@@ -260,12 +264,12 @@ async function cmdStatus() {
   }
 }
 
-async function cmdStop() {
+async function cmdStop(excludePid?: number) {
   const monitorPid = getPid();
 
   // 强制查找并停止所有 openclaw-monitor 进程（跨平台）
   try {
-    const { execSync } = require('child_process');
+    
     let pids: number[] = [];
 
     if (process.platform === 'win32') {
@@ -308,6 +312,11 @@ async function cmdStop() {
       }
     }
 
+    // 排除当前进程（避免 restart 命令被自己杀掉）
+    if (excludePid) {
+      pids = pids.filter(pid => pid !== excludePid);
+    }
+
     if (pids.length === 0) {
       console.log('监控服务未运行');
       removePid();
@@ -330,6 +339,8 @@ async function cmdStop() {
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // 强制清理仍在运行的进程
+    let remainingPids: number[] = [];
+
     if (process.platform === 'win32') {
       // Windows: 重新检查
       try {
@@ -342,8 +353,7 @@ async function cmdStop() {
             try {
               const cmd = execSync(`wmic process where ProcessId=${pid} get CommandLine /VALUE`, { encoding: 'utf-8' });
               if (cmd.toLowerCase().includes('openclaw-monitor')) {
-                console.log(`  强制停止进程 ${pid}...`);
-                process.kill(pid, 'SIGKILL');
+                remainingPids.push(pid);
               }
             } catch {
               // 进程可能已结束
@@ -362,16 +372,26 @@ async function cmdStop() {
           const parts = line.trim().split(/\s+/);
           const pid = parseInt(parts[1]);
           if (!isNaN(pid)) {
-            try {
-              console.log(`  强制停止进程 ${pid}...`);
-              process.kill(pid, 'SIGKILL');
-            } catch {
-              // 进程可能已结束
-            }
+            remainingPids.push(pid);
           }
         }
       } catch {
         // 没有剩余进程了
+      }
+    }
+
+    // 排除当前进程
+    if (excludePid) {
+      remainingPids = remainingPids.filter(pid => pid !== excludePid);
+    }
+
+    // 强制杀掉剩余进程
+    for (const pid of remainingPids) {
+      try {
+        console.log(`  强制停止进程 ${pid}...`);
+        process.kill(pid, 'SIGKILL');
+      } catch {
+        // 进程可能已结束
       }
     }
 
@@ -389,8 +409,8 @@ async function cmdStop() {
 async function cmdRestart(daemonMode = true) {
   console.log('正在重启监控服务...');
 
-  // 先停止所有 openclaw-monitor 进程
-  await cmdStop();
+  // 先停止所有 openclaw-monitor 进程（排除当前 restart 进程）
+  await cmdStop(process.pid);
 
   // 等待端口释放
   console.log('等待端口释放...');
@@ -398,7 +418,7 @@ async function cmdRestart(daemonMode = true) {
 
   // 检查端口是否仍被占用，并且强制清理（跨平台）
   try {
-    const { execSync } = require('child_process');
+    
     let attempts = 0;
     while (attempts < 5) {
       try {
@@ -481,11 +501,14 @@ async function cmdRestart(daemonMode = true) {
 }
 
 async function cmdLogs(lines = 50) {
-  const monitor = new OpenClawMonitor();
-
   try {
-    await monitor.start();
-    const logs = monitor.getRecentLines(lines);
+    const response = await fetch(`http://127.0.0.1:37890/api/logs?n=${lines}`);
+    if (!response.ok) {
+      console.error('获取日志失败: API 返回错误');
+      process.exit(1);
+    }
+
+    const logs = await response.json() as Array<{ timestamp: string; level: string; message: string }>;
 
     if (logs.length === 0) {
       console.log('暂无日志');
@@ -500,24 +523,25 @@ async function cmdLogs(lines = 50) {
       const level = log.level.padEnd(5);
       console.log(`[${timestamp}] [${level}] ${log.message}`);
     }
-
-    await monitor.stop();
   } catch (error) {
     console.error('获取日志失败:', error instanceof Error ? error.message : String(error));
+    console.error('提示: 请确保 openclaw-monitor 正在运行');
     process.exit(1);
   }
 }
 
 async function cmdDiagnose(lines = 20) {
-  const monitor = new OpenClawMonitor();
-
   try {
-    await monitor.start();
-    const errors = monitor.getErrorLogs(lines);
+    const response = await fetch(`http://127.0.0.1:37890/api/logs/errors?limit=${lines}`);
+    if (!response.ok) {
+      console.error('诊断失败: API 返回错误');
+      process.exit(1);
+    }
+
+    const errors = await response.json() as Array<{ timestamp: string; level: string; message: string }>;
 
     if (errors.length === 0) {
       console.log('✓ 未发现错误日志');
-      await monitor.stop();
       return;
     }
 
@@ -531,10 +555,9 @@ async function cmdDiagnose(lines = 20) {
 
     console.log('');
     console.log('建议：检查 OpenClaw 配置和日志文件以获取更多信息');
-
-    await monitor.stop();
   } catch (error) {
     console.error('诊断失败:', error instanceof Error ? error.message : String(error));
+    console.error('提示: 请确保 openclaw-monitor 正在运行');
     process.exit(1);
   }
 }
@@ -584,10 +607,7 @@ async function cmdServiceUninstall() {
 }
 
 async function installLaunchdService() {
-  const { execSync } = require('child_process');
-  const homeDir = require('os').homedir();
-
-  const plistPath = join(homeDir, 'Library', 'LaunchAgents', 'com.openclaw.monitor.plist');
+  const plistPath = join(homedir(), 'Library', 'LaunchAgents', 'com.openclaw.monitor.plist');
   const executablePath = process.argv[1];
 
   const plistContent = `<?xml version="1.0" encoding="UTF-8"?>
@@ -630,9 +650,7 @@ async function installLaunchdService() {
 }
 
 async function uninstallLaunchdService() {
-  const { execSync } = require('child_process');
-  const homeDir = require('os').homedir();
-  const plistPath = join(homeDir, 'Library', 'LaunchAgents', 'com.openclaw.monitor.plist');
+  const plistPath = join(homedir(), 'Library', 'LaunchAgents', 'com.openclaw.monitor.plist');
 
   try {
     // 停止服务
@@ -659,7 +677,7 @@ async function uninstallLaunchdService() {
 }
 
 async function installSystemdService() {
-  const { execSync } = require('child_process');
+  
 
   const servicePath = '/etc/systemd/system/openclaw-monitor.service';
   const executablePath = process.argv[1];
@@ -704,7 +722,7 @@ WantedBy=multi-user.target`;
 }
 
 async function uninstallSystemdService() {
-  const { execSync } = require('child_process');
+  
   const servicePath = '/etc/systemd/system/openclaw-monitor.service';
 
   try {
@@ -727,7 +745,6 @@ async function uninstallSystemdService() {
 // 解析命令行参数
 async function main() {
   const command = args[0]?.toLowerCase();
-  const hasDaemonFlag = args.includes('--daemon');
   const hasForceFlag = args.includes('--force') || args.includes('-f');
 
   switch (command) {
@@ -743,7 +760,7 @@ async function main() {
       break;
 
     case 'start':
-      await cmdStart(hasDaemonFlag);
+      await cmdStart();  // 默认 daemon 模式
       break;
 
     case 'stop':
@@ -751,7 +768,7 @@ async function main() {
       break;
 
     case 'restart':
-      await cmdRestart(hasDaemonFlag);
+      await cmdRestart();  // 默认 daemon 模式
       break;
 
     case 'status':
