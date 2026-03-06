@@ -1,17 +1,17 @@
 // src/api/routes.ts
 
-// @ts-nocheck - 等待 fastify 依赖安装后移除此行
-
 import type { OpenClawMonitor } from '../OpenClawMonitor.js';
 import type { ProcessStatus } from '../types/process.js';
+import type { MonitorConfig } from '../types/config.js';
 
 export const routes = async function(fastify: any, options: { monitor: OpenClawMonitor }) {
+  // 将 monitor 存储在 fastify 实例上
   fastify.monitor = options.monitor;
 
   // 获取状态
   fastify.get('/status', async (request: any, reply: any) => {
-    const monitor = fastify.monitor;
-    if (!monitor.isStarted()) {
+    const monitor = fastify.monitor as OpenClawMonitor;
+    if (!monitor || !monitor.isStarted()) {
       return reply.code(503).send({ error: 'Monitor not started' });
     }
 
@@ -21,8 +21,8 @@ export const routes = async function(fastify: any, options: { monitor: OpenClawM
 
   // 获取最近日志
   fastify.get('/logs', async (request: any, reply: any) => {
-    const monitor = fastify.monitor;
-    if (!monitor.isStarted()) {
+    const monitor = fastify.monitor as OpenClawMonitor;
+    if (!monitor || !monitor.isStarted()) {
       return reply.code(503).send({ error: 'Monitor not started' });
     }
 
@@ -35,8 +35,8 @@ export const routes = async function(fastify: any, options: { monitor: OpenClawM
 
   // 搜索日志
   fastify.get('/logs/search', async (request: any, reply: any) => {
-    const monitor = fastify.monitor;
-    if (!monitor.isStarted()) {
+    const monitor = fastify.monitor as OpenClawMonitor;
+    if (!monitor || !monitor.isStarted()) {
       return reply.code(503).send({ error: 'Monitor not started' });
     }
 
@@ -52,8 +52,8 @@ export const routes = async function(fastify: any, options: { monitor: OpenClawM
 
   // 获取错误日志
   fastify.get('/logs/errors', async (request: any, reply: any) => {
-    const monitor = fastify.monitor;
-    if (!monitor.isStarted()) {
+    const monitor = fastify.monitor as OpenClawMonitor;
+    if (!monitor || !monitor.isStarted()) {
       return reply.code(503).send({ error: 'Monitor not started' });
     }
 
@@ -65,14 +65,33 @@ export const routes = async function(fastify: any, options: { monitor: OpenClawM
 
   // 获取配置
   fastify.get('/config', async (request: any, reply: any) => {
-    const monitor = fastify.monitor;
+    const monitor = fastify.monitor as OpenClawMonitor;
+    if (!monitor) {
+      return reply.code(503).send({ error: 'Monitor not available' });
+    }
     return monitor.getConfig();
+  });
+
+  // 更新配置
+  fastify.post('/config', async (request: any, reply: any) => {
+    const monitor = fastify.monitor as OpenClawMonitor;
+    if (!monitor) {
+      return reply.code(503).send({ error: 'Monitor not available' });
+    }
+
+    try {
+      const newConfig = request.body as Partial<MonitorConfig>;
+      monitor.updateConfig(newConfig);
+      return { success: true, config: monitor.getConfig() };
+    } catch (error) {
+      return reply.code(400).send({ error: (error as Error).message });
+    }
   });
 
   // 刷新状态
   fastify.post('/refresh', async (request: any, reply: any) => {
-    const monitor = fastify.monitor;
-    if (!monitor.isStarted()) {
+    const monitor = fastify.monitor as OpenClawMonitor;
+    if (!monitor || !monitor.isStarted()) {
       return reply.code(503).send({ error: 'Monitor not started' });
     }
 
@@ -80,9 +99,14 @@ export const routes = async function(fastify: any, options: { monitor: OpenClawM
     return { success: true, status };
   });
 
-  // SSE 实时更新
+  // WebSocket 实时更新
   fastify.get('/events', { websocket: true }, async (connection: any, req: any) => {
-    const monitor = fastify.monitor;
+    const monitor = fastify.monitor as OpenClawMonitor;
+    if (!monitor) {
+      connection.socket.send(JSON.stringify({ type: 'error', message: 'Monitor not available' }));
+      connection.socket.close();
+      return;
+    }
 
     const sendEvent = (data: ProcessStatus) => {
       try {

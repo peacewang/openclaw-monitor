@@ -7,12 +7,14 @@ import { ConfigLoader } from './config/loader.js';
 import { OpenClawEnvDetectorImpl } from './env/detector.js';
 import { ProcessMonitorImpl } from './monitor/process.js';
 import { LogCollectorImpl } from './monitor/log.js';
+import { ApiServer } from './api/server.js';
 
 export class OpenClawMonitor {
   private config: MonitorConfig;
   private envDetector: OpenClawEnvDetectorImpl;
   private processMonitor?: ProcessMonitorImpl;
   private logCollector?: LogCollectorImpl;
+  private apiServer?: ApiServer;
   private started = false;
 
   constructor(config?: Partial<MonitorConfig>) {
@@ -43,6 +45,15 @@ export class OpenClawMonitor {
     this.logCollector = new LogCollectorImpl(this.envDetector, this.config);
     await this.logCollector.start();
 
+    // 启动 Web API
+    if (this.config.web?.enabled) {
+      this.apiServer = new ApiServer(this, {
+        host: this.config.web.host,
+        port: this.config.web.port,
+      });
+      await this.apiServer.start();
+    }
+
     this.started = true;
   }
 
@@ -53,6 +64,7 @@ export class OpenClawMonitor {
 
     this.processMonitor?.stop();
     this.logCollector?.stop();
+    await this.apiServer?.stop();
     this.started = false;
   }
 
@@ -63,7 +75,7 @@ export class OpenClawMonitor {
     return this.processMonitor.getStatus();
   }
 
-  getRecentLogs(n: number): LogLine[] {
+  getRecentLines(n: number): LogLine[] {
     if (!this.logCollector) {
       throw new Error('Monitor not started');
     }
@@ -97,6 +109,28 @@ export class OpenClawMonitor {
 
   getConfig(): MonitorConfig {
     return { ...this.config };
+  }
+
+  updateConfig(partial: Partial<MonitorConfig>): void {
+    this.config = { ...this.config, ...partial };
+
+    // 深度合并嵌套对象
+    if (partial.monitoring) {
+      this.config.monitoring = { ...this.config.monitoring, ...partial.monitoring };
+    }
+    if (partial.web) {
+      this.config.web = { ...this.config.web, ...partial.web };
+    }
+    if (partial.alerts) {
+      this.config.alerts = { ...this.config.alerts, ...partial.alerts };
+    }
+    if (partial.openclaw) {
+      this.config.openclaw = { ...this.config.openclaw, ...partial.openclaw };
+    }
+  }
+
+  getWebUrl(): string | null {
+    return this.apiServer?.getAddress() || null;
   }
 
   private mergeConfig(userConfig?: Partial<MonitorConfig>): MonitorConfig {
