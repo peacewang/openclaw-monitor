@@ -5,7 +5,6 @@ import type { AlertConfig, MonitorConfig } from '../types/config.js';
 import type { ProcessStatus } from '../types/process.js';
 import { TelegramChannel } from './channels/telegram.js';
 import { FeishuChannel } from './channels/feishu.js';
-import { LarkChannel } from './channels/lark.js';
 
 export interface AlertRecord {
   id: string;
@@ -57,7 +56,7 @@ export class AlertManager {
     await Promise.all(promises);
   }
 
-  async sendTest(channel: 'telegram' | 'feishu' | 'lark' | 'all'): Promise<void> {
+  async sendTest(channel: 'telegram' | 'feishu' | 'all'): Promise<void> {
     const testAlert: Alert = {
       level: 'INFO',
       title: '测试告警',
@@ -128,10 +127,6 @@ export class AlertManager {
 
     if (alertConfig.feishu) {
       this.channels.push(new FeishuChannel(alertConfig.feishu));
-    }
-
-    if (alertConfig.lark) {
-      this.channels.push(new LarkChannel(alertConfig.lark));
     }
   }
 

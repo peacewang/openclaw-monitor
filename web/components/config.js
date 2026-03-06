@@ -54,75 +54,22 @@ export class ConfigComponent {
             <div class="alert-channels">
               <h4>告警渠道</h4>
 
-              <div class="channel-config">
-                <div class="channel-header">
-                  <label class="form-label">
-                    <input type="checkbox" name="alerts.telegram.enabled" />
-                    Telegram 机器人
-                  </label>
-                  <span class="channel-status" id="telegram-status">未配置</span>
-                </div>
-                <div class="channel-fields" id="telegram-fields">
-                  <div class="form-group">
-                    <label class="form-label">Bot Token</label>
-                    <input type="text" name="alerts.telegram.botToken" class="form-input" placeholder="请输入 Telegram Bot Token" />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Chat ID</label>
-                    <input type="text" name="alerts.telegram.chatId" class="form-input" placeholder="请输入 Telegram Chat ID" />
-                  </div>
-                </div>
-              </div>
+              <label class="channel-toggle">
+                <input type="checkbox" name="alerts.telegram.enabled" />
+                <span class="channel-name">Telegram 机器人</span>
+                <span class="channel-status" id="telegram-status"></span>
+              </label>
 
-              <div class="channel-config">
-                <div class="channel-header">
-                  <label class="form-label">
-                    <input type="checkbox" name="alerts.feishu.enabled" />
-                    飞书机器人
-                  </label>
-                  <span class="channel-status" id="feishu-status">未配置</span>
-                </div>
-                <div class="channel-fields" id="feishu-fields">
-                  <div class="form-group">
-                    <label class="form-label">Webhook URL</label>
-                    <input type="text" name="alerts.feishu.webhookUrl" class="form-input" placeholder="请输入飞书机器人 Webhook URL" />
-                  </div>
-                </div>
-              </div>
+              <label class="channel-toggle">
+                <input type="checkbox" name="alerts.feishu.enabled" />
+                <span class="channel-name">飞书机器人</span>
+                <span class="channel-status" id="feishu-status"></span>
+              </label>
 
-              <div class="channel-config">
-                <div class="channel-header">
-                  <label class="form-label">
-                    <input type="checkbox" name="alerts.lark.enabled" />
-                    Lark 机器人
-                  </label>
-                  <span class="channel-status" id="lark-status">未配置</span>
-                </div>
-                <div class="channel-fields" id="lark-fields">
-                  <div class="form-group">
-                    <label class="form-label">App ID</label>
-                    <input type="text" name="alerts.lark.appId" class="form-input" placeholder="请输入 Lark App ID" />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">App Secret</label>
-                    <input type="text" name="alerts.lark.appSecret" class="form-input" placeholder="请输入 Lark App Secret" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="config-section">
-            <h3>Web 配置</h3>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">监听地址</label>
-                <input type="text" name="web.host" class="form-input" placeholder="0.0.0.0" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">监听端口</label>
-                <input type="number" name="web.port" class="form-input" min="1" max="65535" />
-              </div>
+              <small class="form-hint">
+                告警渠道配置请直接编辑配置文件：<br>
+                <code>~/.openclaw-monitor/config.json</code>
+              </small>
             </div>
           </div>
 
@@ -176,31 +123,14 @@ export class ConfigComponent {
       // Telegram
       if (this.config.alerts.telegram) {
         this.setFieldValue(form, 'alerts.telegram.enabled', this.config.alerts.telegram.enabled);
-        this.setFieldValue(form, 'alerts.telegram.botToken', this.config.alerts.telegram.botToken);
-        this.setFieldValue(form, 'alerts.telegram.chatId', this.config.alerts.telegram.chatId);
         this.updateChannelStatus('telegram', this.config.alerts.telegram);
       }
 
       // Feishu
       if (this.config.alerts.feishu) {
         this.setFieldValue(form, 'alerts.feishu.enabled', this.config.alerts.feishu.enabled);
-        this.setFieldValue(form, 'alerts.feishu.webhookUrl', this.config.alerts.feishu.webhookUrl);
         this.updateChannelStatus('feishu', this.config.alerts.feishu);
       }
-
-      // Lark
-      if (this.config.alerts.lark) {
-        this.setFieldValue(form, 'alerts.lark.enabled', this.config.alerts.lark.enabled);
-        this.setFieldValue(form, 'alerts.lark.appId', this.config.alerts.lark.appId);
-        this.setFieldValue(form, 'alerts.lark.appSecret', this.config.alerts.lark.appSecret);
-        this.updateChannelStatus('lark', this.config.alerts.lark);
-      }
-    }
-
-    // Web 配置
-    if (this.config.web) {
-      this.setFieldValue(form, 'web.host', this.config.web.host);
-      this.setFieldValue(form, 'web.port', this.config.web.port);
     }
   }
 
@@ -226,7 +156,7 @@ export class ConfigComponent {
       statusEl.textContent = '✓ 已启用';
       statusEl.className = 'channel-status enabled';
     } else if (hasConfig) {
-      statusEl.textContent = '○ 已配置，未启用';
+      statusEl.textContent = '○ 已配置';
       statusEl.className = 'channel-status configured';
     } else {
       statusEl.textContent = '✗ 未配置';
@@ -239,9 +169,7 @@ export class ConfigComponent {
       case 'telegram':
         return !!(config?.botToken && config?.chatId);
       case 'feishu':
-        return !!config?.webhookUrl;
-      case 'lark':
-        return !!(config?.appId && config?.appSecret);
+        return !!(config?.app_id && config?.app_secret);
       default:
         return false;
     }
@@ -260,14 +188,14 @@ export class ConfigComponent {
     const changes = {};
 
     // 收集监控配置
-    const monitoring: any = {};
-    const interval = form.querySelector('[name="monitoring.interval"]') as HTMLInputElement;
+    const monitoring = {};
+    const interval = form.querySelector('[name="monitoring.interval"]');
     if (interval?.value) monitoring.interval = parseInt(interval.value);
 
-    const cpuWarning = form.querySelector('[name="monitoring.thresholds.cpu.warning"]') as HTMLInputElement;
-    const cpuCritical = form.querySelector('[name="monitoring.thresholds.cpu.critical"]') as HTMLInputElement;
-    const memWarning = form.querySelector('[name="monitoring.thresholds.memory.warning"]') as HTMLInputElement;
-    const memCritical = form.querySelector('[name="monitoring.thresholds.memory.critical"]') as HTMLInputElement;
+    const cpuWarning = form.querySelector('[name="monitoring.thresholds.cpu.warning"]');
+    const cpuCritical = form.querySelector('[name="monitoring.thresholds.cpu.critical"]');
+    const memWarning = form.querySelector('[name="monitoring.thresholds.memory.warning"]');
+    const memCritical = form.querySelector('[name="monitoring.thresholds.memory.critical"]');
 
     if (cpuWarning?.value || cpuCritical?.value) {
       monitoring.thresholds = {
@@ -286,59 +214,22 @@ export class ConfigComponent {
       changes.monitoring = monitoring;
     }
 
-    // 收集告警配置
-    const alertsEnabled = form.querySelector('[name="alerts.enabled"]') as HTMLInputElement;
-    const alerts: any = { enabled: alertsEnabled?.checked ?? false };
+    // 收集告警配置（只保存开关状态）
+    const alertsEnabled = form.querySelector('[name="alerts.enabled"]');
+    const tgEnabled = form.querySelector('[name="alerts.telegram.enabled"]');
+    const fsEnabled = form.querySelector('[name="alerts.feishu.enabled"]');
 
-    // Telegram
-    const tgEnabled = form.querySelector('[name="alerts.telegram.enabled"]') as HTMLInputElement;
-    const tgToken = form.querySelector('[name="alerts.telegram.botToken"]') as HTMLInputElement;
-    const tgChatId = form.querySelector('[name="alerts.telegram.chatId"]') as HTMLInputElement;
+    const alerts = { enabled: alertsEnabled?.checked ?? false };
 
-    if (tgEnabled?.checked || tgToken?.value || tgChatId?.value) {
-      alerts.telegram = {
-        enabled: tgEnabled?.checked ?? false,
-        botToken: tgToken?.value || undefined,
-        chatId: tgChatId?.value || undefined,
-      };
+    if (tgEnabled) {
+      alerts.telegram = { enabled: tgEnabled.checked };
     }
 
-    // Feishu
-    const fsEnabled = form.querySelector('[name="alerts.feishu.enabled"]') as HTMLInputElement;
-    const fsWebhook = form.querySelector('[name="alerts.feishu.webhookUrl"]') as HTMLInputElement;
-
-    if (fsEnabled?.checked || fsWebhook?.value) {
-      alerts.feishu = {
-        enabled: fsEnabled?.checked ?? false,
-        webhookUrl: fsWebhook?.value || undefined,
-      };
-    }
-
-    // Lark
-    const lkEnabled = form.querySelector('[name="alerts.lark.enabled"]') as HTMLInputElement;
-    const lkAppId = form.querySelector('[name="alerts.lark.appId"]') as HTMLInputElement;
-    const lkAppSecret = form.querySelector('[name="alerts.lark.appSecret"]') as HTMLInputElement;
-
-    if (lkEnabled?.checked || lkAppId?.value || lkAppSecret?.value) {
-      alerts.lark = {
-        enabled: lkEnabled?.checked ?? false,
-        appId: lkAppId?.value || undefined,
-        appSecret: lkAppSecret?.value || undefined,
-      };
+    if (fsEnabled) {
+      alerts.feishu = { enabled: fsEnabled.checked };
     }
 
     changes.alerts = alerts;
-
-    // 收集 Web 配置
-    const webHost = form.querySelector('[name="web.host"]') as HTMLInputElement;
-    const webPort = form.querySelector('[name="web.port"]') as HTMLInputElement;
-
-    if (webHost?.value || webPort?.value) {
-      changes.web = {
-        host: webHost?.value || undefined,
-        port: webPort?.value ? parseInt(webPort.value) : undefined,
-      };
-    }
 
     try {
       const res = await fetch(`${this.apiBase}/config`, {

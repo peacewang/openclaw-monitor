@@ -7,14 +7,16 @@ import Lark from '@larksuiteoapi/node-sdk';
 import { addUserOpenId, getUserOpenIds, setFeishuClient } from '../alert/channels/feishu.js';
 import { writeFile, readFile } from 'fs/promises';
 import { resolve } from 'path';
+import { homedir } from 'os';
 
-const USER_IDS_FILE = resolve(process.cwd(), 'feishu_users.json');
+// 飞书用户 ID 列表文件（全局配置路径）
+const USER_IDS_FILE = resolve(homedir(), '.openclaw-monitor', 'feishu_users.json');
 
 async function loadUserIds(): Promise<string[]> {
   try {
     const data = await readFile(USER_IDS_FILE, 'utf-8');
     const ids = JSON.parse(data);
-    return ids || [];
+    return Array.isArray(ids) ? ids : [];
   } catch {
     return [];
   }
@@ -24,6 +26,12 @@ async function saveUserId(openId: string): Promise<void> {
   const ids = await loadUserIds();
   if (!ids.includes(openId)) {
     ids.push(openId);
+
+    // 确保目录存在
+    const { mkdir } = await import('fs/promises');
+    const { dirname } = await import('path');
+    await mkdir(dirname(USER_IDS_FILE), { recursive: true });
+
     await writeFile(USER_IDS_FILE, JSON.stringify(ids, null, 2));
   }
 }

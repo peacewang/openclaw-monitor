@@ -28,6 +28,10 @@ export class ConfigLoader {
     const platform = os.platform();
     const paths: string[] = [];
 
+    // 1. 通用配置目录 ~/.openclaw-monitor/config.json（跨平台优先）
+    paths.push(path.join(os.homedir(), '.openclaw-monitor', 'config.json'));
+
+    // 2. 平台特定路径
     switch (platform) {
       case 'win32':
         paths.push(
@@ -38,20 +42,14 @@ export class ConfigLoader {
       case 'darwin':
         paths.push(
           path.join(os.homedir(), 'Library', 'Application Support', 'openclaw-monitor', 'config.json'),
-          path.join(os.homedir(), '.openclaw-monitor', 'config.json'),
         );
         break;
       case 'linux':
         paths.push(
           path.join(os.homedir(), '.config', 'openclaw-monitor', 'config.json'),
-          path.join(os.homedir(), '.openclaw-monitor', 'config.json'),
         );
         break;
     }
-
-    // 当前目录
-    paths.push(path.join(process.cwd(), 'config.json'));
-    paths.push(path.join(process.cwd(), 'openclaw-monitor.config.json'));
 
     return paths;
   }

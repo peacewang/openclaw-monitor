@@ -45,16 +45,26 @@ export class OpenClawPaths {
         );
         break;
       case 'darwin':
-        paths.push(
-          path.join(os.homedir(), 'Library', 'Logs', 'openclaw'),
-          path.join(PathUtils.getUserDataDir(), 'openclaw', 'logs'),
-        );
-        break;
       case 'linux':
+        // 通用配置目录 ~/.openclaw/logs（跨平台）
         paths.push(
-          path.join(os.homedir(), '.local', 'share', 'openclaw', 'logs'),
-          path.join(PathUtils.getUserDataDir(), 'openclaw', 'logs'),
+          path.join(os.homedir(), '.openclaw', 'logs'),
         );
+        // macOS 特定路径
+        if (platform === 'darwin') {
+          paths.push(
+            path.join(os.homedir(), 'Library', 'Logs', 'openclaw'),
+            path.join(PathUtils.getUserDataDir(), 'openclaw', 'logs'),
+          );
+        }
+        // Linux 特定路径
+        if (platform === 'linux') {
+          paths.push(
+            path.join(os.homedir(), '.local', 'share', 'openclaw', 'logs'),
+            path.join(os.homedir(), '.config', 'openclaw', 'logs'),
+            path.join(PathUtils.getUserDataDir(), 'openclaw', 'logs'),
+          );
+        }
         break;
     }
 

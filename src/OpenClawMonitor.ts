@@ -171,7 +171,7 @@ export class OpenClawMonitor {
     return this.alertManager?.getHistory(level, limit) ?? [];
   }
 
-  async sendTestAlert(channel: 'telegram' | 'feishu' | 'lark' | 'all' = 'all'): Promise<void> {
+  async sendTestAlert(channel: 'telegram' | 'feishu' | 'all' = 'all'): Promise<void> {
     if (!this.alertManager) {
       throw new Error('Alert manager not initialized');
     }

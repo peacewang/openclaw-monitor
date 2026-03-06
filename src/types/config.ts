@@ -35,7 +35,6 @@ export interface AlertConfig {
   enabled: boolean;
   telegram?: TelegramConfig;
   feishu?: FeishuConfig;
-  lark?: LarkConfig;
 }
 
 export interface TelegramConfig {
@@ -47,14 +46,6 @@ export interface TelegramConfig {
 
 export interface FeishuConfig {
   enabled: boolean;
-  app_id?: string;
-  app_secret?: string;
-  webhook?: string;
-  secret?: string;
-}
-
-export interface LarkConfig {
-  enabled: boolean;
-  webhook: string;
-  secret?: string;
+  app_id: string;
+  app_secret: string;
 }

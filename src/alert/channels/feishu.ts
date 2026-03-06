@@ -1,6 +1,5 @@
 // src/alert/channels/feishu.ts
 
-import * as crypto from 'crypto';
 import type { AlertChannel, Alert } from '../../types/alert.js';
 import type { FeishuConfig } from '../../types/config.js';
 import Lark from '@larksuiteoapi/node-sdk';
@@ -34,44 +33,8 @@ export class FeishuChannel implements AlertChannel {
       return;
     }
 
-    // 如果配置了 webhook，使用 webhook 方式
-    if (this.config.webhook) {
-      await this.sendViaWebhook(alert);
-      return;
-    }
-
     // 使用 Bot API 方式
     await this.sendViaBotApi(alert);
-  }
-
-  private async sendViaWebhook(alert: Alert): Promise<void> {
-    const card = this.buildCard(alert);
-    const timestamp = Math.floor(Date.now() / 1000);
-
-    const payload = {
-      msg_type: 'interactive',
-      card,
-      timestamp,
-      sign: this.config.secret ? this.generateSign(timestamp) : undefined,
-    };
-
-    try {
-      const response = await fetch(this.config.webhook!, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Feishu webhook error: ${error}`);
-      }
-    } catch (error) {
-      console.error('[Feishu Alert] Failed to send via webhook:', error);
-      throw error;
-    }
   }
 
   private async sendViaBotApi(alert: Alert): Promise<void> {
@@ -123,71 +86,6 @@ export class FeishuChannel implements AlertChannel {
     const emoji = this.getEmoji(alert.level);
     const time = alert.timestamp?.toLocaleString('zh-CN') || new Date().toLocaleString('zh-CN');
     return `${emoji} ${alert.title}\n级别: ${alert.level}\n${alert.message}\n时间: ${time}`;
-  }
-
-  private buildCard(alert: Alert) {
-    const emoji = this.getEmoji(alert.level);
-    const color = this.getColor(alert.level);
-
-    return {
-      header: {
-        title: {
-          tag: 'plain_text',
-          content: `${emoji} OpenClaw Monitor 告警`,
-        },
-        template: color,
-      },
-      elements: [
-        {
-          tag: 'div',
-          fields: [
-            {
-              is_short: false,
-              text: {
-                tag: 'lark_md',
-                content: `**级别**: ${alert.level}\n**标题**: ${alert.title}`,
-              },
-            },
-            {
-              is_short: false,
-              text: {
-                tag: 'plain_text',
-                content: alert.message,
-              },
-            },
-          ],
-        },
-        {
-          tag: 'div',
-          text: {
-            tag: 'plain_text',
-            content: `时间: ${alert.timestamp?.toLocaleString('zh-CN') || new Date().toLocaleString('zh-CN')}`,
-          },
-        },
-      ],
-    };
-  }
-
-  private generateSign(timestamp: number): string {
-    if (!this.config.secret) {
-      return '';
-    }
-
-    const stringToSign = `${timestamp}\n${this.config.secret}`;
-    return crypto
-      .createHmac('sha256', this.config.secret)
-      .update(stringToSign)
-      .digest('base64');
-  }
-
-  private getColor(level: string): string {
-    const colors: Record<string, string> = {
-      INFO: 'blue',
-      WARNING: 'yellow',
-      ERROR: 'red',
-      CRITICAL: 'red',
-    };
-    return colors[level] || 'blue';
   }
 
   private getEmoji(level: string): string {

@@ -20,7 +20,7 @@ OpenClaw Gateway 监控工具 v1.0.0
 用法: openclaw-monitor <command> [options]
 
 命令:
-  config init       初始化配置文件 (config.json)
+  config init       初始化配置文件
   start             启动监控服务 (默认后台守护进程模式)
   stop              停止监控服务
   restart           重启监控服务 (默认后台守护进程模式)
@@ -36,58 +36,109 @@ OpenClaw Gateway 监控工具 v1.0.0
   -f, --force       强制覆盖配置文件
 
 示例:
-  openclaw-monitor start              # 后台启动
-  openclaw-monitor status             # 查看状态
-  openclaw-monitor stop               # 停止服务
-  openclaw-monitor restart            # 重启服务
-  openclaw-monitor service-install    # 安装系统服务
+  openclaw-monitor config init       # 创建配置文件 (~/.openclaw-monitor/)
+  openclaw-monitor start             # 后台启动
+  openclaw-monitor status            # 查看状态
+  openclaw-monitor stop              # 停止服务
+  openclaw-monitor restart           # 重启服务
+  openclaw-monitor service-install   # 安装系统服务
+
+配置文件位置: ~/.openclaw-monitor/config.json (跨平台通用)
   `);
 }
 
 async function cmdConfigInit(force = false) {
-  const configPath = resolve(process.cwd(), 'config.json');
-  const examplePath = resolve(process.cwd(), 'config.example.json');
+  const { homedir } = await import('os');
+  const path = await import('path');
 
-  // 检查示例文件是否存在
-  if (!existsSync(examplePath)) {
-    console.error('错误: config.example.json 文件不存在');
-    console.log('请确保在 openclaw-monitor 项目目录中运行此命令');
-    process.exit(1);
+  // 全局配置路径（跨平台通用）
+  const configPath = resolve(homedir(), '.openclaw-monitor', 'config.json');
+
+  // 读取或生成示例配置
+  let exampleConfig: any;
+
+  // 1. 尝试从当前目录的 config.example.json 读取
+  const localExamplePath = resolve(process.cwd(), 'config.example.json');
+  if (existsSync(localExamplePath)) {
+    const exampleContent = readFileSync(localExamplePath, 'utf-8');
+    exampleConfig = JSON.parse(exampleContent);
+  } else {
+    // 2. 使用内置的默认配置
+    exampleConfig = {
+      monitoring: {
+        enabled: true,
+        interval: 5,
+        logLines: 100,
+        thresholds: {
+          cpu: { warning: 80, critical: 95 },
+          memory: { warning: 1024, critical: 2048 },
+        },
+      },
+      openclaw: {
+        autoDetect: true,
+      },
+      web: {
+        enabled: true,
+        port: 37890,
+        host: '0.0.0.0',
+      },
+      alerts: {
+        enabled: false,
+        telegram: {
+          enabled: false,
+          botToken: '',
+          chatId: '',
+        },
+        feishu: {
+          enabled: false,
+          webhookUrl: '',
+        },
+        lark: {
+          enabled: false,
+          appId: '',
+          appSecret: '',
+        },
+      },
+    };
   }
+
+  // 移除 $comment 字段（如果存在）
+  delete (exampleConfig as any).$comment;
 
   // 检查配置文件是否已存在
   if (existsSync(configPath)) {
     if (force) {
-      console.log('警告: 强制覆盖现有配置文件');
+      console.log(`⚠️  强制覆盖现有配置文件: ${configPath}`);
     } else {
-      console.log('配置文件 config.json 已存在');
+      console.log('❌ 配置文件已存在');
+      console.log(`   位置: ${configPath}`);
+      console.log('');
       console.log('如需重新生成，请使用:');
       console.log('  openclaw-monitor config init --force');
       process.exit(1);
     }
   }
 
-  // 读取示例配置
-  const exampleConfig = readFileSync(examplePath, 'utf-8');
-  const config = JSON.parse(exampleConfig);
-
-  // 移除 $comment 字段
-  delete (config as any).$comment;
+  // 确保目录存在
+  const configDir = path.dirname(configPath);
+  if (!existsSync(configDir)) {
+    const { mkdirSync } = await import('fs');
+    mkdirSync(configDir, { recursive: true });
+  }
 
   // 写入配置文件
-  writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+  writeFileSync(configPath, JSON.stringify(exampleConfig, null, 2), 'utf-8');
 
-  console.log('✓ 配置文件已创建: config.json');
+  console.log('✅ 配置文件已创建');
   console.log('');
-  console.log('下一步:');
-  console.log('  1. 编辑 config.json，填写你的配置信息');
-  console.log('  2. 至少配置一个告警渠道 (telegram 或 feishu)');
-  console.log('  3. 运行: openclaw-monitor start');
+  console.log(`📁 位置: ${configPath}`);
+  console.log(`🌍 类型: 全局配置（所有目录可用）`);
   console.log('');
-  console.log('配置说明:');
-  console.log('  - alerts.enabled: 设置为 true 启用告警');
-  console.log('  - telegram: 配置 Telegram Bot (可选)');
-  console.log('  - feishu: 配置飞书 Bot (可选)');
+  console.log('📝 下一步:');
+  console.log('  1. 编辑配置文件，填写你的配置信息');
+  console.log('  2. 至少配置一个告警渠道 (telegram/feishu/lark)');
+  console.log('  3. 设置 alerts.enabled = true 启用告警');
+  console.log('  4. 运行: openclaw-monitor start');
 }
 
 // Daemon相关函数
@@ -140,15 +191,32 @@ async function cmdStart(daemonMode = true) {
       process.exit(1);
     }
 
-    const logFile = resolve(tmpdir(), 'openclaw-monitor.log');
+    // 日志文件路径（全局配置目录）
+    const { homedir } = await import('os');
+    const { mkdirSync } = await import('fs');
+    const logDir = resolve(homedir(), '.openclaw-monitor', 'logs');
+    const logFile = resolve(logDir, 'openclaw-monitor.log');
+
+    // 确保日志目录存在
+    try {
+      mkdirSync(logDir, { recursive: true });
+    } catch (error) {
+      console.error('无法创建日志目录:', error);
+      throw error;
+    }
+
     // 强制使用 'start' 命令启动守护进程，避免 restart 递归
     const args = [process.argv[1], 'start'];
 
     try {
+      // 打开日志文件用于写入
+      const { openSync } = await import('fs');
+      const logFd = openSync(logFile, 'a');
+
       // 使用跨平台的 Node.js 后台运行方式
       const child = spawn(process.argv[0], args, {
         detached: true,
-        stdio: ['ignore', 'ignore', 'ignore'],
+        stdio: ['ignore', logFd, logFd], // stdout 和 stderr 写入日志文件
         env: { ...process.env, OPENCLAW_MONITOR_DAEMON: '1', OPENCLAW_MONITOR_LOG: logFile }
       });
 

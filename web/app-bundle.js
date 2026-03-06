@@ -1,4 +1,20 @@
-"use strict";(()=>{var l=class{constructor(t){this.apiBase=t,this.chart=null,this.chartData={labels:[],cpu:[],memory:[]},this.maxDataPoints=60,this.currentStatus=null}render(){return`
+"use strict";
+(() => {
+  // web/components/status.js
+  var StatusComponent = class {
+    constructor(apiBase) {
+      this.apiBase = apiBase;
+      this.chart = null;
+      this.chartData = {
+        labels: [],
+        cpu: [],
+        memory: []
+      };
+      this.maxDataPoints = 60;
+      this.currentStatus = null;
+    }
+    render() {
+      return `
       <div class="status-page">
         <!-- \u9876\u90E8\u72B6\u6001\u6A2A\u5E45 -->
         <div class="status-banner" id="statusBanner">
@@ -439,7 +455,200 @@
           }
         </style>
       </div>
-    `}async onMounted(){await this.refresh(),this.initChart(),this.bindEvents(),this.refreshInterval=setInterval(()=>this.refresh(),5e3)}bindEvents(){document.getElementById("btnQuickRefresh")?.addEventListener("click",()=>this.refresh()),document.getElementById("btnRestart")?.addEventListener("click",()=>this.handleRestart()),document.getElementById("btnStop")?.addEventListener("click",()=>this.handleStop()),document.getElementById("btnStart")?.addEventListener("click",()=>this.handleStart()),document.getElementById("btnDiagnose")?.addEventListener("click",()=>this.handleDiagnose())}async refresh(){try{let t=await fetch(`${this.apiBase}/status`);if(!t.ok)throw new Error("Failed to fetch status");let e=await t.json();this.currentStatus=e,this.updateUI(e),this.updateChart(e)}catch(t){console.error("Failed to refresh status:",t),this.showError()}}updateUI(t){let e=document.getElementById("statusBanner"),s=document.getElementById("statusIcon"),n=document.getElementById("statusTitle"),i=document.getElementById("statusSubtitle");t.running?(e.className="status-banner running",s.textContent="\u2705",n.textContent="OpenClaw Gateway \u8FD0\u884C\u4E2D",i.textContent=`PID: ${t.pid||"N/A"} | \u7AEF\u53E3: ${t.port||"N/A"}`):(e.className="status-banner stopped",s.textContent="\u274C",n.textContent="OpenClaw Gateway \u5DF2\u505C\u6B62",i.textContent="\u70B9\u51FB\u4E0B\u65B9\u6309\u94AE\u542F\u52A8\u670D\u52A1"),document.getElementById("metricCpu").textContent=(t.cpuPercent?.toFixed(1)||"0")+"%",document.getElementById("metricCpuBar").style.width=Math.min(t.cpuPercent||0,100)+"%",document.getElementById("metricMemory").textContent=(t.memoryMB?.toFixed(0)||"0")+" MB",document.getElementById("metricMemoryBar").style.width=Math.min((t.memoryMB||0)/20,100)+"%",document.getElementById("metricPid").textContent=t.pid||"--",document.getElementById("metricPort").textContent=t.port||"--",document.getElementById("metricPortStatus").textContent=t.portOpen?"\u2713 \u76D1\u542C\u4E2D":"\u2717 \u672A\u76D1\u542C",document.getElementById("infoUptime").textContent=this.formatUptime(t.uptime),document.getElementById("infoLastCheck").textContent=new Date(t.lastCheck).toLocaleTimeString("zh-CN"),document.getElementById("infoRestarts").textContent=t.restartCount||0}showError(){let t=document.getElementById("statusBanner");t&&(t.className="status-banner stopped",document.getElementById("statusIcon").textContent="\u26A0\uFE0F",document.getElementById("statusTitle").textContent="\u65E0\u6CD5\u83B7\u53D6\u72B6\u6001",document.getElementById("statusSubtitle").textContent="\u8BF7\u68C0\u67E5\u670D\u52A1\u662F\u5426\u6B63\u5E38\u8FD0\u884C")}initChart(){let t=document.getElementById("trendChart");if(t){if(typeof Chart>"u"){setTimeout(()=>this.initChart(),100);return}this.chart=new Chart(t,{type:"line",data:{labels:this.chartData.labels,datasets:[{label:"CPU (%)",data:this.chartData.cpu,borderColor:"#3b82f6",backgroundColor:"rgba(59, 130, 246, 0.1)",tension:.4,fill:!0,pointRadius:0},{label:"\u5185\u5B58 (MB)",data:this.chartData.memory,borderColor:"#10b981",backgroundColor:"rgba(16, 185, 129, 0.1)",tension:.4,fill:!0,pointRadius:0}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1}},scales:{x:{display:!1},y:{ticks:{color:"#64748b",font:{size:10}},grid:{color:"#334155"}}},interaction:{intersect:!1,mode:"index"}}})}}updateChart(t){if(!t.running||!this.chart)return;let e=new Date().toLocaleTimeString();this.chartData.labels.push(e),this.chartData.cpu.push(t.cpuPercent||0),this.chartData.memory.push(t.memoryMB||0),this.chartData.labels.length>this.maxDataPoints&&(this.chartData.labels.shift(),this.chartData.cpu.shift(),this.chartData.memory.shift()),this.chart.data.labels=this.chartData.labels,this.chart.data.datasets[0].data=this.chartData.cpu,this.chart.data.datasets[1].data=this.chartData.memory,this.chart.update("none")}async handleRestart(){confirm("\u786E\u8BA4\u8981\u91CD\u542F OpenClaw Gateway \u5417\uFF1F")&&await this.doAction("/api/gateway/restart","\u91CD\u542F")}async handleStop(){confirm("\u786E\u8BA4\u8981\u505C\u6B62 OpenClaw Gateway \u5417\uFF1F")&&await this.doAction("/api/gateway/stop","\u505C\u6B62")}async handleStart(){await this.doAction("/api/gateway/start","\u542F\u52A8")}async handleDiagnose(){try{let e=await(await fetch(`${this.apiBase}/logs/errors?limit=10`)).json();e.length===0?alert("\u2705 \u672A\u53D1\u73B0\u9519\u8BEF"):alert(`\u53D1\u73B0 ${e.length} \u6761\u9519\u8BEF\uFF0C\u8BF7\u67E5\u770B\u65E5\u5FD7\u9875\u9762`)}catch(t){alert("\u8BCA\u65AD\u5931\u8D25: "+t.message)}}async doAction(t,e){showToast(`\u6B63\u5728${e} Gateway...`,"info");try{let s=await fetch(t,{method:"POST"});if(!s.ok)throw new Error(`HTTP ${s.status}`);let n=await s.json();showToast(n.message||`${e}\u547D\u4EE4\u5DF2\u53D1\u9001`,"success"),await this.refresh()}catch(s){showToast(`${e}\u5931\u8D25: `+s.message,"error")}}formatUptime(t){if(!t)return"--";let e=Math.floor(t/86400),s=Math.floor(t%86400/3600),n=Math.floor(t%3600/60);return e>0?`${e}\u5929 ${s}\u5C0F\u65F6`:s>0?`${s}\u5C0F\u65F6 ${n}\u5206\u949F`:`${n}\u5206\u949F`}async refreshPage(){this.refreshInterval&&clearInterval(this.refreshInterval),await this.onMounted()}};var c=class{constructor(t){this.apiBase=t}render(){return`
+    `;
+    }
+    async onMounted() {
+      await this.refresh();
+      this.initChart();
+      this.bindEvents();
+      this.refreshInterval = setInterval(() => this.refresh(), 5e3);
+    }
+    bindEvents() {
+      document.getElementById("btnQuickRefresh")?.addEventListener("click", () => this.refresh());
+      document.getElementById("btnRestart")?.addEventListener("click", () => this.handleRestart());
+      document.getElementById("btnStop")?.addEventListener("click", () => this.handleStop());
+      document.getElementById("btnStart")?.addEventListener("click", () => this.handleStart());
+      document.getElementById("btnDiagnose")?.addEventListener("click", () => this.handleDiagnose());
+    }
+    async refresh() {
+      try {
+        const res = await fetch(`${this.apiBase}/status`);
+        if (!res.ok) throw new Error("Failed to fetch status");
+        const data = await res.json();
+        this.currentStatus = data;
+        this.updateUI(data);
+        this.updateChart(data);
+      } catch (error) {
+        console.error("Failed to refresh status:", error);
+        this.showError();
+      }
+    }
+    updateUI(data) {
+      const banner = document.getElementById("statusBanner");
+      const icon = document.getElementById("statusIcon");
+      const title = document.getElementById("statusTitle");
+      const subtitle = document.getElementById("statusSubtitle");
+      if (data.running) {
+        banner.className = "status-banner running";
+        icon.textContent = "\u2705";
+        title.textContent = "OpenClaw Gateway \u8FD0\u884C\u4E2D";
+        subtitle.textContent = `PID: ${data.pid || "N/A"} | \u7AEF\u53E3: ${data.port || "N/A"}`;
+      } else {
+        banner.className = "status-banner stopped";
+        icon.textContent = "\u274C";
+        title.textContent = "OpenClaw Gateway \u5DF2\u505C\u6B62";
+        subtitle.textContent = "\u70B9\u51FB\u4E0B\u65B9\u6309\u94AE\u542F\u52A8\u670D\u52A1";
+      }
+      document.getElementById("metricCpu").textContent = (data.cpuPercent?.toFixed(1) || "0") + "%";
+      document.getElementById("metricCpuBar").style.width = Math.min(data.cpuPercent || 0, 100) + "%";
+      document.getElementById("metricMemory").textContent = (data.memoryMB?.toFixed(0) || "0") + " MB";
+      document.getElementById("metricMemoryBar").style.width = Math.min((data.memoryMB || 0) / 20, 100) + "%";
+      document.getElementById("metricPid").textContent = data.pid || "--";
+      document.getElementById("metricPort").textContent = data.port || "--";
+      document.getElementById("metricPortStatus").textContent = data.portOpen ? "\u2713 \u76D1\u542C\u4E2D" : "\u2717 \u672A\u76D1\u542C";
+      document.getElementById("infoUptime").textContent = this.formatUptime(data.uptime);
+      document.getElementById("infoLastCheck").textContent = new Date(data.lastCheck).toLocaleTimeString("zh-CN");
+      document.getElementById("infoRestarts").textContent = data.restartCount || 0;
+    }
+    showError() {
+      const banner = document.getElementById("statusBanner");
+      if (banner) {
+        banner.className = "status-banner stopped";
+        document.getElementById("statusIcon").textContent = "\u26A0\uFE0F";
+        document.getElementById("statusTitle").textContent = "\u65E0\u6CD5\u83B7\u53D6\u72B6\u6001";
+        document.getElementById("statusSubtitle").textContent = "\u8BF7\u68C0\u67E5\u670D\u52A1\u662F\u5426\u6B63\u5E38\u8FD0\u884C";
+      }
+    }
+    initChart() {
+      const canvas = document.getElementById("trendChart");
+      if (!canvas) return;
+      if (typeof Chart === "undefined") {
+        setTimeout(() => this.initChart(), 100);
+        return;
+      }
+      this.chart = new Chart(canvas, {
+        type: "line",
+        data: {
+          labels: this.chartData.labels,
+          datasets: [
+            {
+              label: "CPU (%)",
+              data: this.chartData.cpu,
+              borderColor: "#3b82f6",
+              backgroundColor: "rgba(59, 130, 246, 0.1)",
+              tension: 0.4,
+              fill: true,
+              pointRadius: 0
+            },
+            {
+              label: "\u5185\u5B58 (MB)",
+              data: this.chartData.memory,
+              borderColor: "#10b981",
+              backgroundColor: "rgba(16, 185, 129, 0.1)",
+              tension: 0.4,
+              fill: true,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              display: false
+            },
+            y: {
+              ticks: { color: "#64748b", font: { size: 10 } },
+              grid: { color: "#334155" }
+            }
+          },
+          interaction: {
+            intersect: false,
+            mode: "index"
+          }
+        }
+      });
+    }
+    updateChart(data) {
+      if (!data.running || !this.chart) return;
+      const now = (/* @__PURE__ */ new Date()).toLocaleTimeString();
+      this.chartData.labels.push(now);
+      this.chartData.cpu.push(data.cpuPercent || 0);
+      this.chartData.memory.push(data.memoryMB || 0);
+      if (this.chartData.labels.length > this.maxDataPoints) {
+        this.chartData.labels.shift();
+        this.chartData.cpu.shift();
+        this.chartData.memory.shift();
+      }
+      this.chart.data.labels = this.chartData.labels;
+      this.chart.data.datasets[0].data = this.chartData.cpu;
+      this.chart.data.datasets[1].data = this.chartData.memory;
+      this.chart.update("none");
+    }
+    async handleRestart() {
+      if (!confirm("\u786E\u8BA4\u8981\u91CD\u542F OpenClaw Gateway \u5417\uFF1F")) return;
+      await this.doAction("/api/gateway/restart", "\u91CD\u542F");
+    }
+    async handleStop() {
+      if (!confirm("\u786E\u8BA4\u8981\u505C\u6B62 OpenClaw Gateway \u5417\uFF1F")) return;
+      await this.doAction("/api/gateway/stop", "\u505C\u6B62");
+    }
+    async handleStart() {
+      await this.doAction("/api/gateway/start", "\u542F\u52A8");
+    }
+    async handleDiagnose() {
+      try {
+        const res = await fetch(`${this.apiBase}/logs/errors?limit=10`);
+        const errors = await res.json();
+        if (errors.length === 0) {
+          alert("\u2705 \u672A\u53D1\u73B0\u9519\u8BEF");
+        } else {
+          alert(`\u53D1\u73B0 ${errors.length} \u6761\u9519\u8BEF\uFF0C\u8BF7\u67E5\u770B\u65E5\u5FD7\u9875\u9762`);
+        }
+      } catch (error) {
+        alert("\u8BCA\u65AD\u5931\u8D25: " + error.message);
+      }
+    }
+    async doAction(url, name) {
+      showToast(`\u6B63\u5728${name} Gateway...`, "info");
+      try {
+        const res = await fetch(url, { method: "POST" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const result = await res.json();
+        showToast(result.message || `${name}\u547D\u4EE4\u5DF2\u53D1\u9001`, "success");
+        await this.refresh();
+      } catch (error) {
+        showToast(`${name}\u5931\u8D25: ` + error.message, "error");
+      }
+    }
+    formatUptime(uptime) {
+      if (!uptime) return "--";
+      const seconds = Math.floor(uptime / 1e3);
+      const days = Math.floor(seconds / 86400);
+      const hours = Math.floor(seconds % 86400 / 3600);
+      const minutes = Math.floor(seconds % 3600 / 60);
+      if (days > 0) return `${days}\u5929 ${hours}\u5C0F\u65F6`;
+      if (hours > 0) return `${hours}\u5C0F\u65F6 ${minutes}\u5206\u949F`;
+      if (minutes > 0) return `${minutes}\u5206\u949F`;
+      return `${seconds}\u79D2`;
+    }
+    async refreshPage() {
+      if (this.refreshInterval) clearInterval(this.refreshInterval);
+      await this.onMounted();
+    }
+  };
+
+  // web/components/logs.js
+  var LogsComponent = class {
+    constructor(apiBase) {
+      this.apiBase = apiBase;
+    }
+    render() {
+      return `
       <div class="logs-page">
         <h2>\u65E5\u5FD7\u67E5\u770B</h2>
 
@@ -457,13 +666,95 @@
           <button class="btn btn-primary" onclick="refreshLogs()">\u5237\u65B0</button>
         </div>
       </div>
-    `}async onMounted(){await this.loadLogs(),window.refreshLogs=()=>this.loadLogs(),window.searchLogs=()=>this.search(),window.showErrorLogs=()=>this.showErrorOnly(),document.getElementById("logSearch").addEventListener("keypress",t=>{t.key==="Enter"&&this.search()})}async loadLogs(){try{let t=await fetch(`${this.apiBase}/logs?n=100`);if(!t.ok)return;let e=await t.json();this.renderLogs(e)}catch(t){console.error("Failed to load logs:",t)}}async search(){let t=document.getElementById("logSearch").value.trim();if(!t)return this.loadLogs();try{let e=await fetch(`${this.apiBase}/logs/search?q=${encodeURIComponent(t)}&limit=100`);if(!e.ok)return;let s=await e.json();this.renderLogs(s)}catch(e){console.error("Failed to search logs:",e)}}async showErrorOnly(){try{let t=await fetch(`${this.apiBase}/logs/errors?limit=100`);if(!t.ok)return;let e=await t.json();this.renderLogs(e)}catch(t){console.error("Failed to load error logs:",t)}}renderLogs(t){let e=document.getElementById("logs-list");if(!t||t.length===0){e.innerHTML='<div class="empty-state">\u6682\u65E0\u65E5\u5FD7</div>';return}e.innerHTML=t.map(s=>`
+    `;
+    }
+    async onMounted() {
+      await this.loadLogs();
+      window.refreshLogs = () => this.loadLogs();
+      window.searchLogs = () => this.search();
+      window.showErrorLogs = () => this.showErrorOnly();
+      document.getElementById("logSearch").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          this.search();
+        }
+      });
+    }
+    async loadLogs() {
+      try {
+        const res = await fetch(`${this.apiBase}/logs?n=100`);
+        if (!res.ok) {
+          this.renderLogs([]);
+          return;
+        }
+        const logs = await res.json();
+        this.renderLogs(logs || []);
+      } catch (error) {
+        console.error("Failed to load logs:", error);
+        this.renderLogs([]);
+      }
+    }
+    async search() {
+      const query = document.getElementById("logSearch").value.trim();
+      if (!query) {
+        return this.loadLogs();
+      }
+      try {
+        const res = await fetch(`${this.apiBase}/logs/search?q=${encodeURIComponent(query)}&limit=100`);
+        if (!res.ok) return;
+        const logs = await res.json();
+        this.renderLogs(logs);
+      } catch (error) {
+        console.error("Failed to search logs:", error);
+      }
+    }
+    async showErrorOnly() {
+      try {
+        const res = await fetch(`${this.apiBase}/logs/errors?limit=100`);
+        if (!res.ok) return;
+        const logs = await res.json();
+        this.renderLogs(logs);
+      } catch (error) {
+        console.error("Failed to load error logs:", error);
+      }
+    }
+    renderLogs(logs) {
+      const container = document.getElementById("logs-list");
+      if (!container) return;
+      if (!logs || logs.length === 0) {
+        container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">\u{1F4CB}</div>
+          <div class="empty-title">\u6682\u65E0\u65E5\u5FD7</div>
+          <div class="empty-description">
+            \u5F53\u524D\u6CA1\u6709\u53EF\u663E\u793A\u7684\u65E5\u5FD7\u3002\u8BF7\u786E\u4FDD OpenClaw Gateway \u6B63\u5728\u8FD0\u884C\u5E76\u4EA7\u751F\u65E5\u5FD7\u3002
+          </div>
+        </div>
+      `;
+        return;
+      }
+      container.innerHTML = logs.map((log) => `
       <div class="log-line">
-        <span class="log-timestamp">[${new Date(s.timestamp).toLocaleTimeString("zh-CN")}]</span>
-        <span class="log-level ${s.level}">[${s.level}]</span>
-        <span class="log-message">${this.escapeHtml(s.message)}</span>
+        <span class="log-timestamp">[${new Date(log.timestamp).toLocaleTimeString("zh-CN")}]</span>
+        <span class="log-level ${log.level}">[${log.level}]</span>
+        <span class="log-message">${this.escapeHtml(log.message)}</span>
       </div>
-    `).join("")}escapeHtml(t){let e=document.createElement("div");return e.textContent=t,e.innerHTML}};var d=class{constructor(t){this.apiBase=t,this.config=null}render(){return`
+    `).join("");
+    }
+    escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  };
+
+  // web/components/config.js
+  var ConfigComponent = class {
+    constructor(apiBase) {
+      this.apiBase = apiBase;
+      this.config = null;
+    }
+    render() {
+      return `
       <div class="config-page">
         <h2>\u914D\u7F6E\u7BA1\u7406</h2>
 
@@ -473,14 +764,27 @@
             <div class="form-group">
               <label class="form-label">\u68C0\u67E5\u95F4\u9694 (\u79D2)</label>
               <input type="number" name="monitoring.interval" class="form-input" min="1" max="300" />
+              <small class="form-hint">\u7CFB\u7EDF\u72B6\u6001\u68C0\u67E5\u95F4\u9694\uFF0C\u5EFA\u8BAE 5-10 \u79D2</small>
             </div>
-            <div class="form-group">
-              <label class="form-label">CPU \u9608\u503C (%)</label>
-              <input type="number" name="monitoring.cpuThreshold" class="form-input" min="0" max="100" />
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">CPU \u8B66\u544A\u9608\u503C (%)</label>
+                <input type="number" name="monitoring.thresholds.cpu.warning" class="form-input" min="0" max="100" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">CPU \u4E25\u91CD\u9608\u503C (%)</label>
+                <input type="number" name="monitoring.thresholds.cpu.critical" class="form-input" min="0" max="100" />
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">\u5185\u5B58\u9608\u503C (MB)</label>
-              <input type="number" name="monitoring.memoryThreshold" class="form-input" min="0" />
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">\u5185\u5B58\u8B66\u544A\u9608\u503C (MB)</label>
+                <input type="number" name="monitoring.thresholds.memory.warning" class="form-input" min="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">\u5185\u5B58\u4E25\u91CD\u9608\u503C (MB)</label>
+                <input type="number" name="monitoring.thresholds.memory.critical" class="form-input" min="0" />
+              </div>
             </div>
           </div>
 
@@ -489,18 +793,185 @@
             <div class="form-group">
               <label class="form-label">
                 <input type="checkbox" name="alerts.enabled" />
-                \u542F\u7528\u544A\u8B66
+                \u542F\u7528\u544A\u8B66\u529F\u80FD
               </label>
+              <small class="form-hint">\u542F\u7528\u540E\u5C06\u6839\u636E\u9608\u503C\u81EA\u52A8\u53D1\u9001\u544A\u8B66\u901A\u77E5</small>
+            </div>
+
+            <div class="alert-channels">
+              <h4>\u544A\u8B66\u6E20\u9053</h4>
+
+              <label class="channel-toggle">
+                <input type="checkbox" name="alerts.telegram.enabled" />
+                <span class="channel-name">Telegram \u673A\u5668\u4EBA</span>
+                <span class="channel-status" id="telegram-status"></span>
+              </label>
+
+              <label class="channel-toggle">
+                <input type="checkbox" name="alerts.feishu.enabled" />
+                <span class="channel-name">\u98DE\u4E66\u673A\u5668\u4EBA</span>
+                <span class="channel-status" id="feishu-status"></span>
+              </label>
+
+              <small class="form-hint">
+                \u544A\u8B66\u6E20\u9053\u914D\u7F6E\u8BF7\u76F4\u63A5\u7F16\u8F91\u914D\u7F6E\u6587\u4EF6\uFF1A<br>
+                <code>~/.openclaw-monitor/config.json</code>
+              </small>
             </div>
           </div>
 
           <div class="buttons">
-            <button type="submit" class="btn btn-primary">\u4FDD\u5B58\u914D\u7F6E</button>
-            <button type="button" class="btn btn-secondary" onclick="refreshConfig()">\u91CD\u7F6E</button>
+            <button type="submit" class="btn btn-primary">\u{1F4BE} \u4FDD\u5B58\u914D\u7F6E</button>
+            <button type="button" class="btn btn-secondary" onclick="refreshConfig()">\u21BB \u91CD\u7F6E</button>
           </div>
         </form>
       </div>
-    `}async onMounted(){await this.loadConfig(),this.bindForm(),window.refreshConfig=()=>this.loadConfig()}async loadConfig(){try{let t=await fetch(`${this.apiBase}/config`);if(!t.ok)return;this.config=await t.json(),this.populateForm()}catch(t){console.error("Failed to load config:",t),showToast("\u52A0\u8F7D\u914D\u7F6E\u5931\u8D25","error")}}populateForm(){let t=document.getElementById("configForm");this.config.monitoring&&(this.setFieldValue(t,"monitoring.interval",this.config.monitoring.interval),this.setFieldValue(t,"monitoring.cpuThreshold",this.config.monitoring.cpuThreshold),this.setFieldValue(t,"monitoring.memoryThreshold",this.config.monitoring.memoryThreshold)),this.config.alerts&&this.setFieldValue(t,"alerts.enabled",this.config.alerts.enabled)}setFieldValue(t,e,s){let n=t.querySelector(`[name="${e}"]`);n&&(n.type==="checkbox"?n.checked=!!s:n.value=s??"")}bindForm(){document.getElementById("configForm").addEventListener("submit",async e=>{e.preventDefault(),await this.saveConfig()})}async saveConfig(){let t=document.getElementById("configForm"),e=new FormData(t),s={},n={};t.querySelectorAll('[name^="monitoring."]').forEach(a=>{let o=a.name.replace("monitoring.","");a.type==="checkbox"?n[o]=a.checked:a.value&&(n[o]=parseInt(a.value)||a.value)}),Object.keys(n).length>0&&(s.monitoring=n);let i={};t.querySelectorAll('[name^="alerts."]').forEach(a=>{let o=a.name.replace("alerts.","");a.type==="checkbox"?i[o]=a.checked:a.value&&(i[o]=a.value)}),Object.keys(i).length>0&&(s.alerts=i);try{if(!(await fetch(`${this.apiBase}/config`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(s)})).ok)throw new Error("Failed to save config");showToast("\u914D\u7F6E\u5DF2\u4FDD\u5B58","success"),await this.loadConfig()}catch(a){console.error("Failed to save config:",a),showToast("\u4FDD\u5B58\u914D\u7F6E\u5931\u8D25","error")}}};var h=class{constructor(t){this.apiBase=t,this.alerts=[],this.filter="ALL"}render(){return`
+    `;
+    }
+    async onMounted() {
+      await this.loadConfig();
+      this.bindForm();
+      window.refreshConfig = () => this.loadConfig();
+    }
+    async loadConfig() {
+      try {
+        const res = await fetch(`${this.apiBase}/config`);
+        if (!res.ok) return;
+        this.config = await res.json();
+        this.populateForm();
+      } catch (error) {
+        console.error("Failed to load config:", error);
+        showToast("\u52A0\u8F7D\u914D\u7F6E\u5931\u8D25", "error");
+      }
+    }
+    populateForm() {
+      const form = document.getElementById("configForm");
+      if (this.config.monitoring) {
+        this.setFieldValue(form, "monitoring.interval", this.config.monitoring.interval);
+        if (this.config.monitoring.thresholds) {
+          this.setFieldValue(form, "monitoring.thresholds.cpu.warning", this.config.monitoring.thresholds.cpu?.warning);
+          this.setFieldValue(form, "monitoring.thresholds.cpu.critical", this.config.monitoring.thresholds.cpu?.critical);
+          this.setFieldValue(form, "monitoring.thresholds.memory.warning", this.config.monitoring.thresholds.memory?.warning);
+          this.setFieldValue(form, "monitoring.thresholds.memory.critical", this.config.monitoring.thresholds.memory?.critical);
+        }
+      }
+      if (this.config.alerts) {
+        this.setFieldValue(form, "alerts.enabled", this.config.alerts.enabled);
+        if (this.config.alerts.telegram) {
+          this.setFieldValue(form, "alerts.telegram.enabled", this.config.alerts.telegram.enabled);
+          this.updateChannelStatus("telegram", this.config.alerts.telegram);
+        }
+        if (this.config.alerts.feishu) {
+          this.setFieldValue(form, "alerts.feishu.enabled", this.config.alerts.feishu.enabled);
+          this.updateChannelStatus("feishu", this.config.alerts.feishu);
+        }
+      }
+    }
+    setFieldValue(form, name, value) {
+      const input = form.querySelector(`[name="${name}"]`);
+      if (!input) return;
+      if (input.type === "checkbox") {
+        input.checked = !!value;
+      } else {
+        input.value = value ?? "";
+      }
+    }
+    updateChannelStatus(channel, config) {
+      const statusEl = document.getElementById(`${channel}-status`);
+      if (!statusEl) return;
+      const isEnabled = config?.enabled;
+      const hasConfig = this.isChannelConfigured(channel, config);
+      if (isEnabled && hasConfig) {
+        statusEl.textContent = "\u2713 \u5DF2\u542F\u7528";
+        statusEl.className = "channel-status enabled";
+      } else if (hasConfig) {
+        statusEl.textContent = "\u25CB \u5DF2\u914D\u7F6E";
+        statusEl.className = "channel-status configured";
+      } else {
+        statusEl.textContent = "\u2717 \u672A\u914D\u7F6E";
+        statusEl.className = "channel-status not-configured";
+      }
+    }
+    isChannelConfigured(channel, config) {
+      switch (channel) {
+        case "telegram":
+          return !!(config?.botToken && config?.chatId);
+        case "feishu":
+          return !!(config?.app_id && config?.app_secret);
+        default:
+          return false;
+      }
+    }
+    bindForm() {
+      const form = document.getElementById("configForm");
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        await this.saveConfig();
+      });
+    }
+    async saveConfig() {
+      const form = document.getElementById("configForm");
+      const changes = {};
+      const monitoring = {};
+      const interval = form.querySelector('[name="monitoring.interval"]');
+      if (interval?.value) monitoring.interval = parseInt(interval.value);
+      const cpuWarning = form.querySelector('[name="monitoring.thresholds.cpu.warning"]');
+      const cpuCritical = form.querySelector('[name="monitoring.thresholds.cpu.critical"]');
+      const memWarning = form.querySelector('[name="monitoring.thresholds.memory.warning"]');
+      const memCritical = form.querySelector('[name="monitoring.thresholds.memory.critical"]');
+      if (cpuWarning?.value || cpuCritical?.value) {
+        monitoring.thresholds = {
+          cpu: {
+            warning: cpuWarning?.value ? parseInt(cpuWarning.value) : void 0,
+            critical: cpuCritical?.value ? parseInt(cpuCritical.value) : void 0
+          },
+          memory: {
+            warning: memWarning?.value ? parseInt(memWarning.value) : void 0,
+            critical: memCritical?.value ? parseInt(memCritical.value) : void 0
+          }
+        };
+      }
+      if (Object.keys(monitoring).length > 0) {
+        changes.monitoring = monitoring;
+      }
+      const alertsEnabled = form.querySelector('[name="alerts.enabled"]');
+      const tgEnabled = form.querySelector('[name="alerts.telegram.enabled"]');
+      const fsEnabled = form.querySelector('[name="alerts.feishu.enabled"]');
+      const alerts = { enabled: alertsEnabled?.checked ?? false };
+      if (tgEnabled) {
+        alerts.telegram = { enabled: tgEnabled.checked };
+      }
+      if (fsEnabled) {
+        alerts.feishu = { enabled: fsEnabled.checked };
+      }
+      changes.alerts = alerts;
+      try {
+        const res = await fetch(`${this.apiBase}/config`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(changes)
+        });
+        if (!res.ok) {
+          throw new Error("Failed to save config");
+        }
+        showToast("\u914D\u7F6E\u5DF2\u4FDD\u5B58", "success");
+        await this.loadConfig();
+      } catch (error) {
+        console.error("Failed to save config:", error);
+        showToast("\u4FDD\u5B58\u914D\u7F6E\u5931\u8D25", "error");
+      }
+    }
+  };
+
+  // web/components/alerts.js
+  var AlertsComponent = class {
+    constructor(apiBase) {
+      this.apiBase = apiBase;
+      this.alerts = [];
+      this.filter = "ALL";
+    }
+    render() {
+      return `
       <div class="alerts-page">
         <h2>\u544A\u8B66\u5386\u53F2</h2>
 
@@ -528,20 +999,155 @@
 
         <div id="alerts-list" class="alerts-list"></div>
       </div>
-    `}async onMounted(){await this.loadAlerts(),this.bindFilter(),window.refreshAlerts=()=>this.loadAlerts(),window.testAlert=t=>this.testAlert(t)}bindFilter(){let t=document.getElementById("alertFilter");t.addEventListener("change",()=>{this.filter=t.value,this.renderAlerts()})}async loadAlerts(){try{let t=await fetch(`${this.apiBase}/alerts?limit=100`);if(!t.ok)return;this.alerts=await t.json(),this.renderAlerts()}catch(t){console.error("Failed to load alerts:",t)}}async testAlert(t){let e={info:"\u2139\uFE0F \u4FE1\u606F\u6D4B\u8BD5",warning:"\u26A0\uFE0F \u8B66\u544A\u6D4B\u8BD5",critical:"\u{1F6A8} \u4E25\u91CD\u6D4B\u8BD5",test:"\u{1F4CB} \u901A\u7528\u6D4B\u8BD5"}[t]||"\u6D4B\u8BD5\u544A\u8B66";try{showToast(`\u6B63\u5728\u53D1\u9001${e}...`,"info");let s=await fetch(`${this.apiBase}/alerts/test`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:t})});if(!s.ok)throw new Error(`HTTP ${s.status}`);let n=await s.json();showToast(`${e}\u5DF2\u53D1\u9001\uFF01\u8BF7\u68C0\u67E5\u98DE\u4E66/Telegram`,"success"),setTimeout(()=>this.loadAlerts(),1e3)}catch(s){console.error("Failed to send test alert:",s),showToast(`\u53D1\u9001\u5931\u8D25: ${s.message}`,"error")}}renderAlerts(){let t=document.getElementById("alerts-list"),e=this.alerts;if(this.filter!=="ALL"&&(e=this.alerts.filter(s=>s.alert.level===this.filter)),!e||e.length===0){t.innerHTML='<div class="empty-state">\u6682\u65E0\u544A\u8B66\u8BB0\u5F55</div>';return}t.innerHTML=e.map(s=>`
-      <div class="alert-item ${s.alert.level}">
+    `;
+    }
+    async onMounted() {
+      await this.loadAlerts();
+      this.bindFilter();
+      window.refreshAlerts = () => this.loadAlerts();
+      window.testAlert = (type) => this.testAlert(type);
+    }
+    bindFilter() {
+      const filter = document.getElementById("alertFilter");
+      filter.addEventListener("change", () => {
+        this.filter = filter.value;
+        this.renderAlerts();
+      });
+    }
+    async loadAlerts() {
+      try {
+        const res = await fetch(`${this.apiBase}/alerts?limit=100`);
+        if (!res.ok) return;
+        this.alerts = await res.json();
+        this.renderAlerts();
+      } catch (error) {
+        console.error("Failed to load alerts:", error);
+      }
+    }
+    async testAlert(type) {
+      const buttonText = {
+        "info": "\u2139\uFE0F \u4FE1\u606F\u6D4B\u8BD5",
+        "warning": "\u26A0\uFE0F \u8B66\u544A\u6D4B\u8BD5",
+        "critical": "\u{1F6A8} \u4E25\u91CD\u6D4B\u8BD5",
+        "test": "\u{1F4CB} \u901A\u7528\u6D4B\u8BD5"
+      }[type] || "\u6D4B\u8BD5\u544A\u8B66";
+      try {
+        showToast(`\u6B63\u5728\u53D1\u9001${buttonText}...`, "info");
+        const res = await fetch(`${this.apiBase}/alerts/test`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type })
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const result = await res.json();
+        showToast(`${buttonText}\u5DF2\u53D1\u9001\uFF01\u8BF7\u68C0\u67E5\u98DE\u4E66/Telegram`, "success");
+        setTimeout(() => this.loadAlerts(), 1e3);
+      } catch (error) {
+        console.error("Failed to send test alert:", error);
+        showToast(`\u53D1\u9001\u5931\u8D25: ${error.message}`, "error");
+      }
+    }
+    renderAlerts() {
+      const container = document.getElementById("alerts-list");
+      let filtered = this.alerts;
+      if (this.filter !== "ALL") {
+        filtered = this.alerts.filter((a) => a.alert.level === this.filter);
+      }
+      if (!filtered || filtered.length === 0) {
+        container.innerHTML = '<div class="empty-state">\u6682\u65E0\u544A\u8B66\u8BB0\u5F55</div>';
+        return;
+      }
+      container.innerHTML = filtered.map((record) => `
+      <div class="alert-item ${record.alert.level}">
         <div class="alert-header">
-          <span class="alert-level">[${s.alert.level}]</span>
-          <span class="alert-title">${this.escapeHtml(s.alert.title)}</span>
-          <span class="alert-time">${new Date(s.sentAt).toLocaleString("zh-CN")}</span>
+          <span class="alert-level">[${record.alert.level}]</span>
+          <span class="alert-title">${this.escapeHtml(record.alert.title)}</span>
+          <span class="alert-time">${new Date(record.sentAt).toLocaleString("zh-CN")}</span>
         </div>
-        <div class="alert-message">${this.escapeHtml(s.alert.message)}</div>
+        <div class="alert-message">${this.escapeHtml(record.alert.message)}</div>
         <div class="alert-meta">
-          <span class="alert-channel">\u6E20\u9053: ${s.channel}</span>
-          <span class="alert-status ${s.success?"success":"failed"}">
-            ${s.success?"\u2713 \u53D1\u9001\u6210\u529F":"\u2717 \u53D1\u9001\u5931\u8D25"}
+          <span class="alert-channel">\u6E20\u9053: ${record.channel}</span>
+          <span class="alert-status ${record.success ? "success" : "failed"}">
+            ${record.success ? "\u2713 \u53D1\u9001\u6210\u529F" : "\u2717 \u53D1\u9001\u5931\u8D25"}
           </span>
-          ${s.error?`<span class="alert-error">\u9519\u8BEF: ${this.escapeHtml(s.error)}</span>`:""}
+          ${record.error ? `<span class="alert-error">\u9519\u8BEF: ${this.escapeHtml(record.error)}</span>` : ""}
         </div>
       </div>
-    `).join("")}escapeHtml(t){let e=document.createElement("div");return e.textContent=t,e.innerHTML}};var m="/api",u=class{constructor(){this.currentPage="status",this.components={status:new l(m),logs:new c(m),config:new d(m),alerts:new h(m)}}async init(){this.bindNavigation(),await this.navigate("status"),this.startPeriodicRefresh()}bindNavigation(){document.querySelectorAll(".nav-items button").forEach(e=>{e.addEventListener("click",()=>{let s=e.dataset.page;s&&this.navigate(s)})})}async navigate(t){this.currentPage=t,document.querySelectorAll(".nav-items button").forEach(i=>{i.classList.toggle("active",i.dataset.page===t)});let s=document.getElementById("page-content"),n=this.components[t];n&&(s.innerHTML=n.render(),await n.onMounted())}startPeriodicRefresh(){setInterval(async()=>{let t=this.components[this.currentPage];t&&t.refresh&&await t.refresh()},3e4)}showToast(t,e="info"){let s=document.getElementById("toast-container"),n=document.createElement("div");n.className=`toast toast-${e}`,n.textContent=t,s.appendChild(n),setTimeout(()=>{n.remove()},3e3)}};window.App=u;window.showToast=(r,t)=>{window.appInstance&&window.appInstance.showToast(r,t)};})();
+    `).join("");
+    }
+    escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  };
+
+  // web/app.js
+  var API_BASE = "/api";
+  var App = class {
+    constructor() {
+      this.currentPage = "status";
+      this.components = {
+        status: new StatusComponent(API_BASE),
+        logs: new LogsComponent(API_BASE),
+        config: new ConfigComponent(API_BASE),
+        alerts: new AlertsComponent(API_BASE)
+      };
+    }
+    async init() {
+      this.bindNavigation();
+      await this.navigate("status");
+      this.startPeriodicRefresh();
+    }
+    bindNavigation() {
+      const navButtons = document.querySelectorAll(".nav-items button");
+      navButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const page = btn.dataset.page;
+          if (page) {
+            this.navigate(page);
+          }
+        });
+      });
+    }
+    async navigate(page) {
+      this.currentPage = page;
+      const navButtons = document.querySelectorAll(".nav-items button");
+      navButtons.forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.page === page);
+      });
+      const content = document.getElementById("page-content");
+      const component = this.components[page];
+      if (component) {
+        content.innerHTML = component.render();
+        await component.onMounted();
+      }
+    }
+    startPeriodicRefresh() {
+      setInterval(async () => {
+        const component = this.components[this.currentPage];
+        if (component && component.refresh) {
+          await component.refresh();
+        }
+      }, 3e4);
+    }
+    showToast(message, type = "info") {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3e3);
+    }
+  };
+  window.App = App;
+  window.showToast = (message, type) => {
+    if (window.appInstance) {
+      window.appInstance.showToast(message, type);
+    }
+  };
+})();
