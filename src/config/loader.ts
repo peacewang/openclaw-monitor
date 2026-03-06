@@ -11,15 +11,16 @@ export class ConfigLoader {
     const configPaths = this.getConfigPaths();
 
     for (const configPath of configPaths) {
-      try {
+            try {
         await fs.access(configPath);
         const userConfig = await this.readConfigFile(configPath);
-        return this.mergeDefaults(userConfig);
+                return this.mergeDefaults(userConfig);
       } catch {
         continue;
       }
     }
 
+    
     return DEFAULT_CONFIG;
   }
 
@@ -49,6 +50,7 @@ export class ConfigLoader {
     }
 
     // 当前目录
+    paths.push(path.join(process.cwd(), 'config.json'));
     paths.push(path.join(process.cwd(), 'openclaw-monitor.config.json'));
 
     return paths;

@@ -114,16 +114,58 @@ export const routes = async function(fastify: any, options: { monitor: OpenClawM
     return alerts;
   });
 
-  // 测试告警
+  // 测试/触发告警
   fastify.post('/alerts/test', async (request: any, reply: any) => {
     const monitor = fastify.monitor as OpenClawMonitor;
     if (!monitor) {
       return reply.code(503).send({ error: 'Monitor not available' });
     }
 
-    // 注意：这里需要访问私有属性，为了演示简化
-    // 实际使用中可以添加一个 public sendTestAlert 方法
-    return { success: true, message: 'Test alert endpoint - implement sendTestAlert method' };
+    try {
+      const body = request.body as { type?: 'test' | 'critical' | 'warning' | 'info' | 'process' };
+      const type = body.type || 'test';
+
+      switch (type) {
+        case 'critical':
+          await monitor.sendAlert({
+            level: 'CRITICAL',
+            title: '🚨 严重告警测试',
+            message: '这是一条严重级别的测试告警！请立即检查！',
+            timestamp: new Date(),
+          });
+          break;
+        case 'warning':
+          await monitor.sendAlert({
+            level: 'WARNING',
+            title: '⚠️ 警告测试',
+            message: '这是一条警告级别的测试消息，请注意检查。',
+            timestamp: new Date(),
+          });
+          break;
+        case 'info':
+          await monitor.sendAlert({
+            level: 'INFO',
+            title: 'ℹ️ 信息测试',
+            message: '这是一条信息级别的测试消息。',
+            timestamp: new Date(),
+          });
+          break;
+        case 'process':
+          await monitor.sendAlert({
+            level: 'CRITICAL',
+            title: '🔴 进程停止告警',
+            message: 'OpenClaw Gateway 进程已停止运行！',
+            timestamp: new Date(),
+          });
+          break;
+        default:
+          await monitor.sendTestAlert();
+      }
+
+      return { success: true, message: `Alert ${type} sent` };
+    } catch (error) {
+      return reply.code(500).send({ error: (error as Error).message });
+    }
   });
 
   // WebSocket 实时更新
@@ -158,4 +200,5 @@ export const routes = async function(fastify: any, options: { monitor: OpenClawM
       unsubscribe();
     });
   });
+
 };

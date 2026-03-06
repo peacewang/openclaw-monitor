@@ -1,6 +1,3 @@
-.gitignore
-.gitattributes
-
 # Claude Code
 .claude/
 
@@ -16,3 +13,9 @@ coverage/
 .DS_Store
 Thumbs.db
 
+# Config files (user specific)
+config.json
+feishu_users.json
+
+# Build output
+web/app-bundle.js

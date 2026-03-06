@@ -88,7 +88,7 @@ openclaw-monitor help
 
 ### 飞书 Bot
 
-1. 创建群机器人
+1. 创建机器人
 2. 复制 Webhook URL
 3. 配置到 config.json:
    ```json

@@ -13,6 +13,7 @@
     "build": "tsc",
     "dev": "tsx src/cli/index.ts",
     "start": "node dist/cli/index.js",
+    "start:dev": "node dist/cli/index.js start --dev",
     "test": "vitest",
     "lint": "eslint src",
     "type-check": "tsc --noEmit",
@@ -21,6 +22,7 @@
   "dependencies": {
     "@fastify/static": "^9.0.0",
     "@fastify/websocket": "^11.2.0",
+    "@larksuiteoapi/node-sdk": "^1.59.0",
     "fastify": "^5.8.1",
     "pidusage": "^3.0.2"
   },

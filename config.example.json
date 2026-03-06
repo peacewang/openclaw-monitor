@@ -1,0 +1,28 @@
+{
+  "monitoring": {
+    "enabled": true,
+    "interval": 5,
+    "logLines": 100
+  },
+  "openclaw": {
+    "autoDetect": true
+  },
+  "web": {
+    "enabled": true,
+    "port": 37890,
+    "host": "0.0.0.0"
+  },
+  "alerts": {
+    "enabled": true,
+    "telegram": {
+      "enabled": true,
+      "botToken": "你的_BOT_TOKEN",
+      "chatId": "你的_CHAT_ID"
+    },
+    "feishu": {
+      "enabled": false,
+      "webhook": "你的_飞书_WEBHOOK_URL",
+      "secret": "可选的_验证密钥"
+    }
+  }
+}

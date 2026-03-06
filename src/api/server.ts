@@ -14,6 +14,7 @@ export interface ApiServerOptions {
 
 export class ApiServer {
   private server?: any;
+  private actualAddress?: string;
 
   constructor(
     private monitor: OpenClawMonitor,
@@ -52,7 +53,10 @@ export class ApiServer {
         port: this.options.port,
       });
 
-      console.log(`Web UI available at http://${this.options.host}:${this.options.port}`);
+      // 0.0.0.0 需要替换为 localhost 才能在浏览器访问
+      const displayHost = this.options.host === '0.0.0.0' ? 'localhost' : this.options.host;
+      this.actualAddress = `http://${displayHost}:${this.options.port}`;
+      console.log(`Web UI available at ${this.actualAddress}`);
     } catch (error) {
       console.error('Failed to start API server:', error);
       throw error;
@@ -66,6 +70,6 @@ export class ApiServer {
   }
 
   getAddress(): string {
-    return `http://${this.options.host}:${this.options.port}`;
+    return this.actualAddress || `http://localhost:${this.options.port}`;
   }
 }
