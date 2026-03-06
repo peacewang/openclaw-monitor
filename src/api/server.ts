@@ -1,6 +1,11 @@
 // src/api/server.ts
 
 import type { OpenClawMonitor } from '../OpenClawMonitor.js';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// 获取当前文件的目录
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export interface ApiServerOptions {
   host: string;
@@ -33,10 +38,12 @@ export class ApiServer {
         monitor: this.monitor,
       });
 
-      // 静态文件服务（Web UI）
+      // 静态文件服务（Web UI）- 使用绝对路径
+      const webRoot = resolve(__dirname, '../../web');
       this.server.register(fastifyStatic.default, {
-        root: './web',
+        root: webRoot,
         prefix: '/',
+        decorateReply: false,
       });
 
       // 启动服务器
