@@ -16,7 +16,9 @@
     "test": "vitest",
     "lint": "eslint src",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "audit": "npm audit",
+    "audit:fix": "npm audit fix"
   },
   "dependencies": {
     "@fastify/static": "^6.0.0",
@@ -28,7 +30,7 @@
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/pidusage": "^2.0.5",
-    "eslint": "^8.56.0",
+    "eslint": "^9.0.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^1.2.0"
@@ -40,5 +42,9 @@
     "dist",
     "web",
     "config.example.json"
-  ]
+  ],
+  "overrides": {
+    "glob": "^10.0.0",
+    "rimraf": "^6.0.0"
+  }
 }
