@@ -18,7 +18,7 @@ export class ProcessMonitorImpl implements ProcessMonitor {
     private envDetector: OpenClawEnvDetector,
     private config: MonitorConfig,
   ) {
-    this.currentStatus = this.createEmptyStatus();
+    this.currentStatus = this.createInitialStatus();
   }
 
   async start(): Promise<void> {
@@ -198,12 +198,23 @@ export class ProcessMonitorImpl implements ProcessMonitor {
     }
   }
 
+  private createInitialStatus(): ProcessStatus {
+    return {
+      running: false,
+      cpuPercent: 0,
+      memoryMB: 0,
+      restartCount: 0,
+      portOpen: false,
+      lastCheck: new Date(),
+    };
+  }
+
   private createEmptyStatus(): ProcessStatus {
     return {
       running: false,
       cpuPercent: 0,
       memoryMB: 0,
-      restartCount: this.currentStatus.restartCount,
+      restartCount: this.currentStatus?.restartCount ?? 0,
       portOpen: false,
       lastCheck: new Date(),
     };
