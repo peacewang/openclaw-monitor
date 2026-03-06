@@ -19,10 +19,10 @@
 
 ## ✨ 功能特性
 
-OpenClaw Monitor 是一个专为 OpenClaw Gateway 设计的监控和远程工具，帮助你：
+OpenClaw Monitor 是一个专为 OpenClaw Gateway 设计的监控管理工具，帮助你：
 
-- 🚨 **实时监控与告警** - 监控openclaw运行状态、CPU、内存占用，异常时自动通知到Bot
-- 🤖 **远程管理** - 通过Bot远程查询openclaw运行状态、运行日志，并支持重启、诊断、修复操作
+- 🚨 **实时监控与告警** - 监控 OpenClaw 运行状态、CPU、内存占用，异常时自动通知到 Bot
+- 🤖 **远程管理** - 通过 Bot 远程查询 OpenClaw 运行状态、运行日志，并支持重启、诊断操作
 - ⚡ **即开即用** - 简单配置，几分钟内完成部署
 - 💬 **多端通知** - Telegram、飞书
 
@@ -66,22 +66,24 @@ npm link
 
 ```bash
 # 1. 初始化配置文件
-> 初始化后位置在 你的用户目录/.openclaw-monitor/config.json
+#    初始化后位置在: ~/.openclaw-monitor/config.json
 openclaw-monitor config init
 
-# 2. 编辑 config.json，填写你的 Bot 信息
-#    - Telegram Bot 或 飞书 Bot 二选一
+# 2. 编辑配置文件，填写你的 Bot 信息
+#    - Telegram Bot 或飞书 Bot 二选一
 #    - 设置 alerts.enabled = true
+vim ~/.openclaw-monitor/config.json
 
-# 3. 启动服务
-openclaw-monitor start/restart
+# 3. 启动服务（默认为守护进程模式）
+openclaw-monitor start
 
 # 4. 查看运行日志
-你的用户目录/.openclaw-monitor/logs/openclaw-monitor.log
+tail -f ~/.openclaw-monitor/logs/openclaw-monitor.log
 
-# 5. web ui
-访问 http://localhost:37890 查看 Web 面板。
+# 5. 访问 Web UI
+#    浏览器打开 http://localhost:37890
 ```
+
 ---
 
 ## ⚙️ 配置说明
@@ -123,8 +125,8 @@ openclaw-monitor start/restart
 {
   "monitoring": {
     "enabled": true,
-    "interval": 5,
-    "logLines": 100,
+    "interval": 10,
+    "logLines": 200,
     "thresholds": {
       "cpu": { "warning": 80, "critical": 95 },
       "memory": { "warning": 1024, "critical": 2048 }
@@ -139,20 +141,30 @@ openclaw-monitor start/restart
     "enabled": true,
     "telegram": {
       "enabled": false,
-      "botToken": "xxx",
-      "chatId": "xxx",
-      "proxy": ""
+      "botToken": "",
+      "chatId": ""
     },
     "feishu": {
       "enabled": false,
-      "app_id": "xxx",
-      "app_secret": "xxx"
+      "app_id": "",
+      "app_secret": ""
     }
   }
 }
 ```
 
 </details>
+
+### 配置项说明
+
+| 选项 | 说明 |
+|------|------|
+| `monitoring.interval` | 状态检查间隔（秒），建议 5-10 |
+| `monitoring.logLines` | 缓存日志行数 |
+| `monitoring.thresholds` | CPU/内存告警阈值 |
+| `alerts.enabled` | 总开关，启用后才会发送告警 |
+| `alerts.telegram.*` | Telegram Bot 配置 |
+| `alerts.feishu.*` | 飞书 Bot 配置 |
 
 ---
 
@@ -162,10 +174,10 @@ openclaw-monitor start/restart
 
 ```bash
 openclaw-monitor config init      # 初始化配置
-openclaw-monitor start            # 启动监控
+openclaw-monitor start            # 启动监控（守护进程模式）
+openclaw-monitor stop             # 停止监控
+openclaw-monitor restart          # 重启监控
 openclaw-monitor status           # 查看状态
-openclaw-monitor logs -n 100      # 查看日志
-openclaw-monitor diagnose -n 20   # 诊断问题
 ```
 
 ### Bot 命令
@@ -177,13 +189,14 @@ openclaw-monitor diagnose -n 20   # 诊断问题
 | `/status` 或 `状态` | 查看运行状态 |
 | `/logs [数量]` 或 `日志` | 查看最近日志 |
 | `/doctor` 或 `诊断` | 诊断系统问题 |
-| `/restart` 或 `重启` | 重启 Gateway |
 | `/help` 或 `帮助` | 显示帮助 |
 
 ### Web 面板
 
-- **状态监控** - 实时状态、资源趋势、控制按钮
-- **日志查看** - 搜索筛选、实时更新
+访问 http://localhost:37890
+
+- **状态监控** - 实时状态、资源趋势图
+- **日志查看** - 搜索筛选、时间倒序展示
 - **配置管理** - 在线修改配置
 - **告警历史** - 历史记录、测试告警
 
@@ -195,27 +208,10 @@ openclaw-monitor diagnose -n 20   # 诊断问题
 |------|------|
 | **运行时** | Node.js >= 18.0.0 |
 | **语言** | TypeScript 5.x |
-| **Web 框架** | Fastify |
-| **WebSocket** | WS (飞书长连接) |
+| **Web 框架** | Fastify 5.x |
 | **进程监控** | pidusage |
-| **Bot SDK** | @larksuiteoapi/node-sdk (飞书) |
+| **Bot SDK** | @larksuiteoapi/node-sdk (飞书长连接) |
 | **前端** | 原生 JavaScript + Chart.js |
-
----
-
-## 📦 依赖项
-
-### 运行时依赖
-
-```json
-{
-  "fastify": "^5.3.0",
-  "@fastify/static": "^6.0.0",
-  "@fastify/websocket": "^11.0.0",
-  "@larksuiteoapi/node-sdk": "^1.59.0",
-  "pidusage": "^3.0.2"
-}
-```
 
 ---
 
@@ -259,7 +255,11 @@ openclaw-monitor diagnose -n 20   # 诊断问题
 ## 📸 界面预览
 
 ### Web 面板
-等我截个图吧
+
+- 状态监控页面：实时显示 OpenClaw 进程状态、CPU/内存使用率
+- 日志查看页面：支持搜索、筛选，日志按时间倒序展示
+- 配置管理页面：在线修改监控配置和告警开关
+- 告警历史页面：查看历史告警记录
 
 ---
 

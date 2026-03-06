@@ -73,8 +73,18 @@ export class OpenClawMonitor {
       await this.apiServer.start();
     }
 
-    // Initialize bot services
-    this.initBotServices();
+    // Initialize bot services (需要等待启动完成，以便加载用户 ID)
+    await this.initBotServices();
+
+    // Bot 服务启动后，检查初始状态，如果 Gateway 未运行则发送告警
+    if (this.processMonitor && this.config.alerts?.enabled) {
+      const initialStatus = await this.processMonitor.getStatus();
+      if (!initialStatus.running && this.alertManager) {
+        console.log('[Monitor] 检测到 Gateway 未运行，发送初始告警');
+        await this.alertManager.sendProcessAlert(initialStatus);
+      }
+    }
+
     this.started = true;
   }
 
@@ -273,27 +283,31 @@ export class OpenClawMonitor {
     };
   }
 
-  private initBotServices(): void {
+  private async initBotServices(): Promise<void> {
 
     if (!this.config.alerts?.enabled) {
       return;
     }
 
+    const startPromises: Promise<void>[] = [];
+
     // Telegram Bot
     if (this.config.alerts.telegram?.enabled) {
       const bot = new TelegramBotService(this.config.alerts.telegram, this);
       this.botServices.push(bot);
-      bot.start().catch(err => console.error("Telegram Bot start failed:", err));
+      startPromises.push(bot.start());
     }
 
     // Feishu Bot
     if (this.config.alerts.feishu?.enabled) {
       const bot = new FeishuBotService(this.config.alerts.feishu, this);
       this.botServices.push(bot);
-      bot.start().catch(err => console.error("Feishu Bot start failed:", err));
+      startPromises.push(bot.start());
     }
 
-    if (this.botServices.length > 0) {
+    // 等待所有 Bot 启动完成
+    if (startPromises.length > 0) {
+      await Promise.allSettled(startPromises);
       console.log(`Started ${this.botServices.length} bot service(s)`);
     }
   }

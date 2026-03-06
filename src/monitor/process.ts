@@ -115,25 +115,30 @@ export class ProcessMonitorImpl implements ProcessMonitor {
 
   private async findProcessWindows(): Promise<number | null> {
     try {
+      const myPid = process.pid;
       const { stdout } = await execAsync(
         'tasklist /FI "IMAGENAME eq node.exe" /FO CSV /NH'
       );
 
       const lines = stdout.split('\n');
       for (const line of lines) {
-        if (line.toLowerCase().includes('openclaw') || line.toLowerCase().includes('gateway')) {
+        if (line.toLowerCase().includes('openclaw') && !line.toLowerCase().includes('openclaw-monitor')) {
           const match = line.match(/"(\d+)"/);
-          return match ? parseInt(match[1], 10) : null;
+          if (match) {
+            const pid = parseInt(match[1], 10);
+            if (pid !== myPid) return pid;
+          }
         }
       }
 
-      // 如果没找到，查找所有 node 进程
+      // 如果没找到，查找所有 node 进程并验证
       for (const line of lines) {
         const match = line.match(/"(\d+)"/);
         if (match) {
           const pid = parseInt(match[1], 10);
-          const isValid = await this.verifyOpenClawProcess(pid);
-          if (isValid) return pid;
+          if (pid !== myPid && await this.verifyOpenClawProcess(pid)) {
+            return pid;
+          }
         }
       }
 
@@ -145,25 +150,37 @@ export class ProcessMonitorImpl implements ProcessMonitor {
 
   private async findProcessUnix(): Promise<number | null> {
     try {
-      // 首先尝试 pgrep
+      // 首先尝试 pgrep，排除 openclaw-monitor 自身
       try {
+        const myPid = process.pid;
         const { stdout } = await execAsync('pgrep -f "openclaw"');
-        const pids = stdout.trim().split('\n').filter(Boolean);
-        if (pids.length > 0) {
-          return parseInt(pids[0], 10);
+        const pids = stdout.trim().split('\n')
+          .map(Number)
+          .filter(pid => pid && pid !== myPid && !isNaN(pid));
+
+        // 验证找到的进程确实是 OpenClaw Gateway
+        for (const pid of pids) {
+          const isValid = await this.isGatewayProcess(pid);
+          if (isValid) return pid;
         }
+
+        return null;
       } catch {
         // pgrep 未找到，继续使用 ps
       }
 
-      // 使用 ps 命令
-      const { stdout } = await execAsync('ps aux | grep -i openclaw | grep -v grep');
+      // 使用 ps 命令，排除 openclaw-monitor
+      const myPid = process.pid;
+      const { stdout } = await execAsync('ps aux | grep -i "openclaw" | grep -v grep | grep -v "openclaw-monitor"');
       const lines = stdout.trim().split('\n');
 
       for (const line of lines) {
         const parts = line.trim().split(/\s+/);
         if (parts.length > 1) {
-          return parseInt(parts[1], 10);
+          const pid = parseInt(parts[1], 10);
+          if (pid && pid !== myPid) {
+            return pid;
+          }
         }
       }
 
@@ -173,10 +190,27 @@ export class ProcessMonitorImpl implements ProcessMonitor {
     }
   }
 
+  private async isGatewayProcess(pid: number): Promise<boolean> {
+    try {
+      const { stdout } = await execAsync(`ps -p ${pid} -o command=`);
+      const cmd = stdout.toLowerCase();
+      // 排除 openclaw-monitor，只认 gateway 或 standalone 启动的 openclaw
+      return cmd.includes('openclaw') &&
+             !cmd.includes('openclaw-monitor') &&
+             !cmd.includes('node.*openclaw-monitor');
+    } catch {
+      return false;
+    }
+  }
+
   private async verifyOpenClawProcess(pid: number): Promise<boolean> {
     try {
       const { stdout } = await execAsync(`wmic process where ProcessId=${pid} get CommandLine /VALUE`);
-      return stdout.toLowerCase().includes('openclaw') || stdout.toLowerCase().includes('gateway');
+      const cmd = stdout.toLowerCase();
+      // 排除 openclaw-monitor，只认 gateway
+      return cmd.includes('openclaw') &&
+             !cmd.includes('openclaw-monitor') &&
+             (cmd.includes('gateway') || cmd.includes('openclaw start') || cmd.includes('standalone'));
     } catch {
       return false;
     }

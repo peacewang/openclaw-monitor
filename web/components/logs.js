@@ -102,7 +102,10 @@ export class LogsComponent {
       return;
     }
 
-    container.innerHTML = logs.map(log => `
+    // 时间倒序：最新的在上面
+    const reversedLogs = [...logs].reverse();
+
+    container.innerHTML = reversedLogs.map(log => `
       <div class="log-line">
         <span class="log-timestamp">[${new Date(log.timestamp).toLocaleTimeString('zh-CN')}]</span>
         <span class="log-level ${log.level}">[${log.level}]</span>

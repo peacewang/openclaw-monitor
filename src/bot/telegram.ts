@@ -4,6 +4,10 @@ import type { BotService } from './types.js';
 import type { TelegramConfig } from '../types/config.js';
 import type { OpenClawMonitor } from '../OpenClawMonitor.js';
 import type { ProcessStatus, LogLine } from '../types/index.js';
+import { exec as execAsync } from 'child_process';
+import { promisify } from 'util';
+
+const exec = promisify(execAsync);
 
 // 创建带代理的 fetch 函数
 function createFetch(proxyUrl?: string): typeof fetch {
@@ -315,19 +319,63 @@ export class TelegramBotService implements BotService {
   private async handleRestart(chatId: string): Promise<void> {
     const status = await this.monitor.getStatus();
 
-    if (!status.running) {
-      await this.sendMessage(chatId,
-        '⚠️ *无法重启*\n\nOpenClaw Gateway 当前未运行，无法重启。\n\n请先手动启动 OpenClaw。'
-      );
-      return;
-    }
+    try {
+      // 检查是否已安装服务
+      const { stdout: statusOutput } = await exec('openclaw gateway status', { timeout: 10000 }).catch(() => ({ stdout: '' }));
+      const serviceInstalled = statusOutput.includes('loaded') || statusOutput.includes('running');
 
-    await this.sendMessage(chatId,
-      '⚠️ *确认重启*\n\nOpenClaw Monitor 当前不支持直接重启 OpenClaw Gateway。\n\n' +
-      '如需重启，请使用以下命令：\n' +
-      '• Linux/macOS: systemctl restart openclaw\n' +
-      '• 或手动: openclaw restart'
-    );
+      if (!serviceInstalled) {
+        // 服务未安装，引导用户安装
+        await this.sendMessage(chatId,
+          '⚠️ *需要先安装服务*\n\n' +
+          'OpenClaw Gateway 服务未安装。\n\n' +
+          '请先执行以下命令安装服务：\n' +
+          '`openclaw gateway install`\n\n' +
+          '安装后再次发送"重启"命令即可。'
+        );
+        return;
+      }
+
+      if (status.running) {
+        await this.sendMessage(chatId, '⏳ *正在重启 OpenClaw Gateway*...\n\n请稍候');
+      } else {
+        await this.sendMessage(chatId, '⏳ *正在启动 OpenClaw Gateway*...\n\n请稍候');
+      }
+
+      // 根据状态选择执行 start 或 restart 命令
+      const command = status.running ? 'openclaw gateway restart' : 'openclaw gateway start';
+      const { stdout, stderr } = await exec(command, { timeout: 30000 });
+
+      // 等待一段时间让进程启动
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      // 检查新状态
+      const newStatus = await this.monitor.getStatus();
+
+      if (newStatus.running) {
+        await this.sendMessage(chatId,
+          '✅ *操作成功*\n\n' +
+          `OpenClaw Gateway 已成功${status.running ? '重启' : '启动'}！\n` +
+          `PID: ${newStatus.pid}\n` +
+          `端口: ${newStatus.port || 'N/A'}`
+        );
+      } else {
+        await this.sendMessage(chatId,
+          '⚠️ *操作结果未知*\n\n' +
+          '命令已执行，但无法确认 Gateway 是否成功启动。\n' +
+          '请稍后使用 /status 命令检查状态。\n\n' +
+          `命令输出: ${stdout || stderr || '无输出'}`
+        );
+      }
+    } catch (error: any) {
+      await this.sendMessage(chatId,
+        '❌ *操作失败*\n\n' +
+        `无法${status.running ? '重启' : '启动'} OpenClaw Gateway：\n` +
+        `${error.message}\n\n` +
+        '请尝试手动操作：\n' +
+        `• ${status.running ? 'openclaw gateway restart' : 'openclaw gateway start'}`
+      );
+    }
   }
 
   private async sendMessage(chatId: string, text: string): Promise<void> {

@@ -732,7 +732,8 @@
       `;
         return;
       }
-      container.innerHTML = logs.map((log) => `
+      const reversedLogs = [...logs].reverse();
+      container.innerHTML = reversedLogs.map((log) => `
       <div class="log-line">
         <span class="log-timestamp">[${new Date(log.timestamp).toLocaleTimeString("zh-CN")}]</span>
         <span class="log-level ${log.level}">[${log.level}]</span>
