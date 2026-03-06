@@ -50,16 +50,10 @@ OpenClaw Monitor 是一个专为 OpenClaw Gateway 设计的监控工具，帮助
 ### 安装
 
 ```bash
-# 从 GitHub 安装（推荐）
 npm install -g peacewang/openclaw-monitor
-
-# 或克隆仓库后本地安装
-git clone https://github.com/peacewang/openclaw-monitor.git
-cd openclaw-monitor
-npm install
-npm run build
-npm link
 ```
+
+> 将 `peacewang` 替换为实际的 GitHub 用户名。
 
 ### 配置
 
