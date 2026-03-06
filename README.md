@@ -2,7 +2,6 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/github/v/release/peacewang/openclaw-monitor?style=flat-square)
 ![License](https://img.shields.io/github/license/peacewang/openclaw-monitor?style=flat-square)
 ![Node](https://img.shields.io/node/v/openclaw-monitor?style=flat-square)
 
@@ -44,16 +43,25 @@ OpenClaw Monitor 是一个专为 OpenClaw Gateway 设计的监控工具，帮助
 
 ### 环境要求
 
-- **Node.js** >= 16.0.0
+- **Node.js** >= 18.0.0
 - **OpenClaw Gateway** 已安装（生产环境）
 
 ### 安装
 
 ```bash
-npm install -g peacewang/openclaw-monitor
-```
+# 克隆仓库
+git clone https://github.com/peacewang/openclaw-monitor.git
+cd openclaw-monitor
 
-> 将 `peacewang` 替换为实际的 GitHub 用户名。
+# 安装依赖
+npm install
+
+# 构建
+npm run build
+
+# 全局链接（可选，便于在任何位置使用）
+npm link
+```
 
 ### 配置
 
@@ -197,7 +205,7 @@ openclaw-monitor diagnose -n 20   # 诊断问题
 
 | 类别 | 技术 |
 |------|------|
-| **运行时** | Node.js >= 16.0.0 |
+| **运行时** | Node.js >= 18.0.0 |
 | **语言** | TypeScript 5.x |
 | **Web 框架** | Fastify |
 | **WebSocket** | WS (飞书长连接) |
@@ -213,21 +221,11 @@ openclaw-monitor diagnose -n 20   # 诊断问题
 
 ```json
 {
-  "fastify": "^4.0.0",
-  "pidusage": "^3.0.0",
-  "@larksuiteoapi/node-sdk": "^1.30.0",
-  "chart.js": "^4.4.0"
-}
-```
-
-### 开发依赖
-
-```json
-{
-  "typescript": "^5.0.0",
-  "tsx": "^4.0.0",
-  "vitest": "^1.0.0",
-  "eslint": "^8.0.0"
+  "fastify": "^5.3.0",
+  "@fastify/static": "^6.0.0",
+  "@fastify/websocket": "^11.0.0",
+  "@larksuiteoapi/node-sdk": "^1.59.0",
+  "pidusage": "^3.0.2"
 }
 ```
 
@@ -289,7 +287,7 @@ openclaw-monitor diagnose -n 20   # 诊断问题
 │  │  ██████  │  ████   │  12345  │  8080 ✓ │           │
 │  └─────────┴─────────┴─────────┴─────────┘           │
 │                                                       │
-│  📈 资源趋势图                                        │
+│  📈 賄源趋势图                                        │
 │  ┌─────────────────────────────────────────┐          │
 │  │    CPU ────                            │          │
 │  │    内存 ────                           │          │
@@ -316,6 +314,7 @@ openclaw-monitor diagnose -n 20   # 诊断问题
 
 ## 📋 待办事项
 
+- [ ] 发布到 npm registry
 - [ ] Docker 镜像支持
 - [ ] 多实例管理
 - [ ] 告警规则自定义
@@ -360,7 +359,6 @@ MIT License - 详见 [LICENSE](LICENSE)
 
 - [OpenClaw Gateway](https://github.com/peacewang/openclaw)
 - [问题反馈](https://github.com/peacewang/openclaw-monitor/issues)
-- [更新日志](CHANGELOG.md)
 
 ---
 
