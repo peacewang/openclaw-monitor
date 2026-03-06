@@ -19,3 +19,7 @@ feishu_users.json
 
 # Build output
 web/app-bundle.js
+
+# Docs and tests (development only)
+/docs/
+/tests/
