@@ -21,10 +21,10 @@
     "audit:fix": "npm audit fix"
   },
   "dependencies": {
-    "@fastify/static": "^6.2.0",
+    "@fastify/static": "^9.0.0",
     "@fastify/websocket": "^11.0.0",
-    "fastify": "^5.3.0",
     "@larksuiteoapi/node-sdk": "^1.59.0",
+    "fastify": "^5.3.0",
     "pidusage": "^3.0.2"
   },
   "devDependencies": {
@@ -44,7 +44,7 @@
     "config.example.json"
   ],
   "overrides": {
-    "glob": "^10.0.0",
+    "glob": "^8.0.0",
     "rimraf": "^6.0.0"
   }
 }

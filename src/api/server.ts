@@ -31,7 +31,7 @@ export class ApiServer {
         logger: false,
       });
 
-      await this.server.register(fastifyWebsocket.default);
+      await this.server.register(fastifyWebsocket);
 
       // 注册路由
       await this.server.register((await import('./routes.js')).routes, {
@@ -41,7 +41,7 @@ export class ApiServer {
 
       // 静态文件服务（Web UI）- 使用绝对路径
       const webRoot = resolve(__dirname, '../../web');
-      this.server.register(fastifyStatic.default, {
+      this.server.register(fastifyStatic, {
         root: webRoot,
         prefix: '/',
         decorateReply: false,
